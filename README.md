@@ -1,3 +1,10 @@
+Required Libraries:
+  1. Python
+  2. discord.py
+  3. numpy
+
+Commands:
+
 !profile [target] - check amount of points, owner, and inventory or *[target]*. *[target]* defaults to yourself.
 
 !daily - claim your daily income. 200 :peach:  every 24 hours.
