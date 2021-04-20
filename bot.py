@@ -1,0 +1,304 @@
+# bot.py
+import os, discord, datetime, random, asyncio
+from dotenv import load_dotenv
+from discord.ext import tasks, commands
+import numpy as np
+from file_mgr import *
+
+load_dotenv()
+DISCORD_TOKEN = os.getenv('DISCORD_TOKEN')
+bot = commands.Bot(command_prefix="!", help_command=None)
+users = []
+points = []
+timer = []
+inventory = []
+owned_by = []
+POINT_NAME = ":peach:"
+DAILY_TIMER = 24
+DAILY_AMT = 200
+
+@tasks.loop(minutes=1)
+async def save():
+    """saves arrays to file"""
+    print("Saving...")
+    await save_scores('users',users)
+    await save_scores('points',points)
+    await save_scores('timer',timer)
+    await save_scores('inventory',inventory)
+    await save_scores('owned_by',owned_by)
+    print("Complete!")
+
+async def load():
+    """loads arrays from file"""
+    print("Loading...")
+    global users
+    global points
+    global timer
+    global owned_by
+    global inventory
+    users = list(await load_scores('users'))
+    points = list(await load_scores('points'))
+    timer = list(await load_scores('timer'))
+    inventory = list(await load_scores('inventory'))
+    owned_by = list(await load_scores('owned_by'))
+    print("Complete!")
+
+@bot.event
+async def on_ready():
+    """load data when connected to discord."""
+    print(f'{bot.user} has connected to Discord!')
+    await load()
+    await save.start()
+
+def new_user(target):
+    """append new user to arrays"""
+    global users
+    global points
+    global timer
+    global inventory
+    global owned_by
+    users.append(int(target))
+    points.append(0)
+    timer.append(datetime.datetime(1,1,1,0,0))
+    inventory.append([int(target)])
+    owned_by.append([int(target),200])
+
+def find_index(target):
+    """func to find index of given target"""
+    global users
+    index = 0
+    for user in users:
+        if target == user:
+            return index
+        index += 1
+    new_user(target)
+    return index
+
+@bot.command(pass_context=True)
+async def daily(ctx):
+    """discord command to claim daily income"""
+    index = find_index(ctx.message.author.id)
+    if timer[index] == datetime.datetime(1,1,1,0,0) or ((datetime.datetime.now() - timer[index]).total_seconds() / 60) >= 1440:
+        points[index] += int(DAILY_AMT)
+        timer[index] = datetime.datetime.now()
+        await ctx.channel.send(f"{ctx.message.author.mention}, you claimed " + str(DAILY_AMT) + " " + POINT_NAME + ", and now have " + str(round(points[index])) + " " + POINT_NAME + ".")
+    else:
+        claim_time = (timer[index] + datetime.timedelta(hours = DAILY_TIMER)) - datetime.datetime.now()
+        if (claim_time.seconds / 3600) <= 3600:
+            claim_time = str(round(claim_time.seconds / 3600)) + " hours."
+        else:
+            claim_time = str(round(claim_time.seconds / 60)) + " minutes."
+        await ctx.channel.send(f"{ctx.message.author.mention}, you have already claimed your daily amount.\nYou can claim in about " + claim_time)
+    print(users, points, timer)
+
+@bot.command(pass_context=True)
+async def gamble(ctx, arg=None):
+    """command for gambling money"""
+    index = find_index(ctx.message.author.id)
+    try:
+        if arg.lower() == "all":
+            arg = points[find_index(ctx.message.author.id)]
+        if int(arg) > points[index]:
+            await ctx.channel.send(f"{ctx.message.author.mention}, you have insufficient " + POINT_NAME + " for this gamble.")
+        elif int(arg) > 0:
+            roll = round(random.random()*100)
+            if roll >= 50:
+                response = "You earned an additional "
+            if roll < 50:
+                response = "You lost "
+                amt = int(arg)
+                points[index] -= int(arg)
+            elif roll < 66:
+                amt = int(float(arg) * 1.5) - float(arg)
+                points[index] += amt
+            elif roll < 75:
+                amt = int(float(arg) * 2) - float(arg)
+                points[index] += amt
+            elif roll < 90:
+                amt = int(float(arg) * 2.33) - float(arg)
+                points[index] += amt
+            elif roll < 100:
+                amt = int(float(arg) * 2.66) - float(arg)
+                points[index] += amt
+            elif roll == 100:
+                amt = int(float(arg) * 3.0) - float(arg)
+                points[index] += amt
+            await ctx.channel.send(f"{ctx.message.author.mention} rolled a " + str(roll) + "!\n" + response + str(int(amt)) + " " + POINT_NAME + ", and now have " + str(int(points[index])) + " " + POINT_NAME + ".")
+        else:
+            await ctx.channel.send(f"{ctx.message.author.mention}, you must bet more than 0 " + POINT_NAME + ".")
+    except ValueError:
+        await ctx.channel.send("Invalid argument, please provide a valid amount.")
+
+@bot.command(pass_context=True)
+async def duel(ctx, target, amt):
+    """discord command for dueling players"""
+    global users
+    global points
+    index = find_index(ctx.message.author.id)
+    if int(amt) > points[index]:
+        await ctx.channel.send(f"{ctx.message.author.mention}, you have insufficient " + POINT_NAME + " to duel.")
+    elif int(amt) > 0:
+        target = await bot.fetch_user(target[3:len(target)-1])
+        await ctx.channel.send(f"{target.mention}, do you accept the duel for " + amt + " " + POINT_NAME + "(y/n)?")
+        timeout = 0
+        while timeout < 10:
+            msg = await bot.wait_for('message')
+            if msg.content.lower() == 'y' and msg.author == target:
+                if int(amt) > points[find_index(target.id)]:
+                    await ctx.channel.send(f"{target.mention}, you have insufficient " + POINT_NAME + " to accept the duel.")
+                    break
+                else:
+                    roll_target = round(random.random()*100)
+                    roll_author = round(random.random()*100)
+                    target_index = find_index(target.id)
+                    author_index = find_index(ctx.message.author.id)
+                    response = ""
+                    if roll_target > roll_author:
+                        response += target.name + " won and gains " + amt + " " + POINT_NAME + ", " + ctx.message.author.name + " loss and loses " + amt + " " + POINT_NAME + "!"
+                        points[target_index] += int(amt)
+                        points[author_index] -= int(amt)
+                    elif roll_target == roll_author:
+                        response += "Oh no... You both rolled the same. You both lose the bet."
+                        points[target_index] -= int(amt)
+                        points[target_index] -= int(amt)
+                    else:
+                        response += ctx.message.author.name + " won and gains " + amt + " " + POINT_NAME + ", " + target.name + " loss and loses " + amt + " " + POINT_NAME + "!"
+                        points[target_index] -= int(amt)
+                        points[author_index] += int(amt)
+                    await ctx.channel.send(f"{target.mention} rolled a " + str(roll_target) + f" and {ctx.message.author.mention} rolled a " + str(roll_author) + ".\n" + response)
+                    break
+            timeout += 1
+        if timeout >= 10:
+            await ctx.channel.send(f"{ctx.message.author.mention}, your duel challenge has timed out.")
+    else:
+        await ctx.channel.send(f"{ctx.message.author.mention}, you must bet more than 0 " + POINT_NAME + " to duel.")
+
+async def heads_or_tails(ctx, choice, amt):
+    """interface for heads or tails game"""
+    await ctx.channel.send("Flipping coin :coin:...")
+    await asyncio.sleep(3)
+    roll = round(random.random())
+    response = f"{ctx.message.author.mention}, the coin landed on "
+    if roll == 1:
+        response += "Tails!"
+    else:
+        response += "Heads!"
+    if roll == choice:
+        response += " You win an additional " + amt + " " + POINT_NAME + "!"
+        points[find_index(ctx.message.author.id)] += int(amt)
+    else:
+        response += " You lose " + amt + " " + POINT_NAME + "!"
+        points[find_index(ctx.message.author.id)] -= int(amt)
+    await ctx.channel.send(response)
+
+@bot.command(pass_context=True)
+async def tails(ctx, amt=None):
+    """discord command for playing heads or tails"""
+    if amt == None or int(amt) <= 0:
+        await ctx.channel.send(f"{ctx.message.author.mention}, please bet a valid amount.")
+    elif int(amt) > points[find_index(ctx.message.author.id)]:
+        await ctx.channel.send(f"{ctx.message.author.mention}, you have insufficient " + POINT_NAME + " for this game.")
+    else:
+        await heads_or_tails(ctx,1,amt)
+
+@bot.command(pass_context=True)
+async def heads(ctx, amt=None):
+    """discord command for playing heads or tails"""
+    if amt == None or int(amt) <= 0:
+        await ctx.channel.send(f"{ctx.message.author.mention}, please bet a valid amount.")
+    elif int(amt) > points[find_index(ctx.message.author.id)]:
+        await ctx.channel.send(f"{ctx.message.author.mention}, you have insufficient " + POINT_NAME + " for this game.")
+    else:
+        await heads_or_tails(ctx,0,amt)
+
+@bot.command(pass_context=True)
+async def manual_save(ctx):
+    """discord command for saving"""
+    if ctx.message.author.name == 'Swidex':
+        await save()
+
+@bot.command(pass_context=True)
+async def give(ctx, target, amt):
+    global users
+    global points
+    index = find_index(ctx.message.author.id)
+    if int(amt) > points[index]:
+        await ctx.channel.send(f"{ctx.message.author.mention}, you have insufficient " + POINT_NAME + " to give.")
+    elif int(amt) > 0:
+        target = await bot.fetch_user(target[3:len(target)-1])
+        points[find_index(target.id)] += int(amt)
+        points[find_index(ctx.message.author.id)] -= int(amt)
+        await ctx.channel.send(f"{ctx.message.author.mention} gave " + amt + " " + POINT_NAME + " to " + target.name)
+    else:
+        await ctx.channel.send(f"{ctx.message.author.mention}, you must give more than 0 " + POINT_NAME + ".")
+
+@bot.command(pass_context=True)
+async def profile(ctx, target=None):
+    """discord command for checking who you own and who your owned by"""
+    if target == None:
+        target = ctx.message.author
+    else:
+        target = await bot.fetch_user(target[3:len(target)-1])
+    index = find_index(target.id)
+    owner = await bot.fetch_user(int(owned_by[index][0]))
+    response = f"***{target.mention}'s Profile:***\n" + POINT_NAME + " : " + str(int(points[index])) + "\n" + "**Owner : **" + f"{owner.mention}" + " for *" + str(owned_by[index][1]) + "* " + POINT_NAME + ".\n" + "**Inventory :**\n"
+    amt = 0
+    try:
+        response += "```"
+        for x in inventory[index]:
+            amt += 1
+            response += str(await bot.fetch_user(int(x))) + "\n"
+        if amt == 0:
+            response += "No One"
+        response += "```"
+    except IndexError:
+        pass
+    await ctx.channel.send(response)
+
+@bot.command(pass_context=True)
+async def buy(ctx, target=None, bid=None):
+    """discord command to buy user"""
+    if target == None or bid==None:
+        await ctx.channel.send(f"{ctx.message.author.mention}, please provide more arguments for the command (i.e !buy <person> <bid>)")
+    elif int(bid) > points[find_index(ctx.message.author.id)]:
+        await ctx.channel.send(f"{ctx.message.author.mention}, you have insufficient " + POINT_NAME + " to make the bid.")
+    else:
+        user = await bot.fetch_user(target[3:len(target)-1])
+        if owned_by[find_index(user.id)][0] == ctx.message.author.id:
+            await ctx.channel.send(f"{ctx.message.author.mention}, you already own this user!")
+        elif int(bid) > int(owned_by[find_index(user.id)][1]):
+            try:
+                for players in inventory:
+                    players.remove(user.id)
+            except ValueError:
+                pass
+            inventory[find_index(ctx.message.author.id)].append(user.id)
+            owned_by[find_index(user.id)][0] = ctx.message.author.id
+            owned_by[find_index(user.id)][1] = bid
+            points[find_index(ctx.message.author.id)] -= int(bid)
+            await ctx.channel.send(f"{ctx.message.author.mention} successfully bought " + f"{user.mention} for " + bid + " " + POINT_NAME + "!")
+        else:
+            await ctx.channel.send(f"{ctx.message.author.mention}, the given bid is too low to buy. Please bet more than " + str(owned_by[find_index(user.id)][1]) + " " + POINT_NAME + " to successfully buy.")
+
+@bot.command(pass_context=True)
+async def sell(ctx, target=None):
+    """discord command to sell user"""
+    if target == None:
+        await ctx.channel.send(f"{ctx.message.author.mention}, please provide more arguments for the command (i.e !buy <person> <bid>)")
+    else:
+        user = await bot.fetch_user(target[3:len(target)-1])
+        if user.id == ctx.message.author.id:
+            await ctx.channel.send(f"{ctx.message.author.mention}, you cannot sell yourself!")
+        else:
+            try:
+                for players in inventory:
+                    players.remove(user.id)
+            except ValueError:
+                pass
+            inventory[find_index(user.id)].append(user.id)
+            owned_by[find_index(user.id)][0] = user.id
+            returned_money = int(owned_by[find_index(user.id)][1])
+            points[find_index(ctx.message.author.id)] += returned_money
+            owned_by[find_index(user.id)][1] = 200
+            await ctx.channel.send(f"{ctx.message.author.mention}, sold " + f"{user.mention}" + " for " + str(returned_money) + " " + POINT_NAME + "!")
+bot.run(DISCORD_TOKEN)
