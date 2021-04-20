@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from discord.ext import tasks, commands
 import numpy as np
 from file_mgr import *
+from discord import utils
 
 load_dotenv()
 DISCORD_TOKEN = os.getenv('DISCORD_TOKEN')
@@ -17,7 +18,7 @@ POINT_NAME = ":peach:"
 DAILY_TIMER = 24
 DAILY_AMT = 200
 
-@tasks.loop(minutes=1)
+@tasks.loop(minutes=30)
 async def save():
     """saves arrays to file"""
     print("Saving...")
@@ -74,22 +75,54 @@ def find_index(target):
     new_user(target)
     return index
 
+async def heads_or_tails(ctx, choice, amt):
+    """interface for heads or tails game"""
+    choice_dict = {0:"Heads",1:"Tails"}
+    flip_embed = discord.Embed(
+        color=ctx.message.author.color,
+        title="**Flipping Coin...**",
+        author=ctx.message.author
+    )
+    flip_embed.set_image(url="https://i.pinimg.com/originals/52/91/f5/5291f56897d748b1ca0a10c90023588d.gif")
+    roll = round(random.random())
+    post_embed = discord.Embed(
+        color=ctx.message.author.color,
+        title="**" + choice_dict.get(roll) +"!**",
+        author=ctx.message.author
+    )
+    image_dict = {0:"https://i.imgur.com/0zwAecv.png",1:"https://i.imgur.com/HolhEG5.png"}
+    post_embed.set_image(url=image_dict.get(roll))
+    if roll == choice:
+        post_embed.description = f"{ctx.message.author.name} won an additional " + str(amt) + " " + POINT_NAME + "!"
+        points[find_index(ctx.message.author.id)] += int(amt)
+    else:
+        post_embed.description = f"{ctx.message.author.name} lost " + str(amt) + " " + POINT_NAME + "!"
+        points[find_index(ctx.message.author.id)] -= int(amt)
+    msg = await ctx.channel.send(embed=flip_embed)
+    await asyncio.sleep(2)
+    await msg.edit(embed=post_embed)
+
 @bot.command(pass_context=True)
 async def daily(ctx):
     """discord command to claim daily income"""
     index = find_index(ctx.message.author.id)
+    embed = discord.Embed(
+        title="**Daily Rewards " + POINT_NAME + "**",
+        color=ctx.message.author.color
+    )
     if timer[index] == datetime.datetime(1,1,1,0,0) or ((datetime.datetime.now() - timer[index]).total_seconds() / 60) >= 1440:
         points[index] += int(DAILY_AMT)
         timer[index] = datetime.datetime.now()
-        await ctx.channel.send(f"{ctx.message.author.mention}, you claimed " + str(DAILY_AMT) + " " + POINT_NAME + ", and now have " + str(round(points[index])) + " " + POINT_NAME + ".")
+        embed.description = f"{ctx.message.author.name} claimed " + str(DAILY_AMT) + " " + POINT_NAME + ", and now has " + str(round(points[index])) + " " + POINT_NAME + "."
     else:
         claim_time = (timer[index] + datetime.timedelta(hours = DAILY_TIMER)) - datetime.datetime.now()
         if (claim_time.seconds / 3600) <= 3600:
-            claim_time = str(round(claim_time.seconds / 3600)) + " hours."
+            claim_time = str(round(claim_time.seconds / 3600)) + " Hours"
         else:
-            claim_time = str(round(claim_time.seconds / 60)) + " minutes."
-        await ctx.channel.send(f"{ctx.message.author.mention}, you have already claimed your daily amount.\nYou can claim in about " + claim_time)
-    print(users, points, timer)
+            claim_time = str(round(claim_time.seconds / 60)) + " Minutes"
+        embed.description = f"{ctx.message.author.name}, you have already claimed your daily amount."
+        embed.add_field(name="Next Claim:",value="~" + claim_time)
+    await ctx.channel.send(embed=embed)
 
 @bot.command(pass_context=True)
 async def gamble(ctx, arg=None):
@@ -102,10 +135,14 @@ async def gamble(ctx, arg=None):
             await ctx.channel.send(f"{ctx.message.author.mention}, you have insufficient " + POINT_NAME + " for this gamble.")
         elif int(arg) > 0:
             roll = round(random.random()*100)
+            embed = discord.Embed(
+                title=f"{ctx.message.author.name} rolled a " + str(roll) + "!",
+                color=ctx.message.author.color
+            )
             if roll >= 50:
-                response = "You earned an additional "
+                embed.description = f"{ctx.message.author.name} earned an additional "
             if roll < 50:
-                response = "You lost "
+                embed.description = f"{ctx.message.author.name} lost "
                 amt = int(arg)
                 points[index] -= int(arg)
             elif roll < 66:
@@ -123,23 +160,26 @@ async def gamble(ctx, arg=None):
             elif roll == 100:
                 amt = int(float(arg) * 3.0) - float(arg)
                 points[index] += amt
-            await ctx.channel.send(f"{ctx.message.author.mention} rolled a " + str(roll) + "!\n" + response + str(int(amt)) + " " + POINT_NAME + ", and now have " + str(int(points[index])) + " " + POINT_NAME + ".")
+            embed.description += str(int(amt)) + " " + POINT_NAME + ", and now has " + str(int(points[index])) + " " + POINT_NAME + "."
+            await ctx.channel.send(embed=embed)
         else:
             await ctx.channel.send(f"{ctx.message.author.mention}, you must bet more than 0 " + POINT_NAME + ".")
     except ValueError:
         await ctx.channel.send("Invalid argument, please provide a valid amount.")
 
 @bot.command(pass_context=True)
-async def duel(ctx, target, amt):
+async def duel(ctx, target=None, amt=None):
     """discord command for dueling players"""
     global users
     global points
     index = find_index(ctx.message.author.id)
-    if int(amt) > points[index]:
+    if amt==None or target==None:
+        await ctx.channel.send(f"{ctx.message.author.mention}, please provide more arguments.")
+    elif int(amt) > points[index]:
         await ctx.channel.send(f"{ctx.message.author.mention}, you have insufficient " + POINT_NAME + " to duel.")
     elif int(amt) > 0:
         target = await bot.fetch_user(target[3:len(target)-1])
-        await ctx.channel.send(f"{target.mention}, do you accept the duel for " + amt + " " + POINT_NAME + "(y/n)?")
+        await ctx.channel.send(f"{target.mention}, do you accept the duel for " + amt + " " + POINT_NAME + " (y/n)?")
         timeout = 0
         while timeout < 10:
             msg = await bot.wait_for('message')
@@ -152,44 +192,32 @@ async def duel(ctx, target, amt):
                     roll_author = round(random.random()*100)
                     target_index = find_index(target.id)
                     author_index = find_index(ctx.message.author.id)
-                    response = ""
+                    embed = discord.Embed()
                     if roll_target > roll_author:
-                        response += target.name + " won and gains " + amt + " " + POINT_NAME + ", " + ctx.message.author.name + " loss and loses " + amt + " " + POINT_NAME + "!"
+                        embed.title=target.name + " wins!"
+                        embed.color = target.color
+                        embed.description = target.name + " gains " + amt + " " + POINT_NAME + " and " + ctx.message.author.name + " loses " + amt + " " + POINT_NAME + "!"
                         points[target_index] += int(amt)
                         points[author_index] -= int(amt)
                     elif roll_target == roll_author:
-                        response += "Oh no... You both rolled the same. You both lose the bet."
+                        embed.title= "Oh no... You both rolled the same. You both lose the bet."
+                        embed.color = bot.user.color
+                        embed.description = target.name + "loses " + amt + " " + POINT_NAME + " and " + ctx.message.author.name + " loses " + amt + " " + POINT_NAME + "!"
                         points[target_index] -= int(amt)
                         points[target_index] -= int(amt)
                     else:
-                        response += ctx.message.author.name + " won and gains " + amt + " " + POINT_NAME + ", " + target.name + " loss and loses " + amt + " " + POINT_NAME + "!"
+                        embed.title=ctx.message.author.name + " wins!"
+                        embed.color = ctx.message.author.color
+                        embed.description = ctx.message.author.name + " gains " + amt + " " + POINT_NAME + " and " + target.name + " loses " + amt + " " + POINT_NAME + "!"
                         points[target_index] -= int(amt)
                         points[author_index] += int(amt)
-                    await ctx.channel.send(f"{target.mention} rolled a " + str(roll_target) + f" and {ctx.message.author.mention} rolled a " + str(roll_author) + ".\n" + response)
+                    await ctx.channel.send(embed=embed)
                     break
             timeout += 1
         if timeout >= 10:
             await ctx.channel.send(f"{ctx.message.author.mention}, your duel challenge has timed out.")
     else:
         await ctx.channel.send(f"{ctx.message.author.mention}, you must bet more than 0 " + POINT_NAME + " to duel.")
-
-async def heads_or_tails(ctx, choice, amt):
-    """interface for heads or tails game"""
-    await ctx.channel.send("Flipping coin :coin:...")
-    await asyncio.sleep(3)
-    roll = round(random.random())
-    response = f"{ctx.message.author.mention}, the coin landed on "
-    if roll == 1:
-        response += "Tails!"
-    else:
-        response += "Heads!"
-    if roll == choice:
-        response += " You win an additional " + amt + " " + POINT_NAME + "!"
-        points[find_index(ctx.message.author.id)] += int(amt)
-    else:
-        response += " You lose " + amt + " " + POINT_NAME + "!"
-        points[find_index(ctx.message.author.id)] -= int(amt)
-    await ctx.channel.send(response)
 
 @bot.command(pass_context=True)
 async def tails(ctx, amt=None):
@@ -219,6 +247,7 @@ async def manual_save(ctx):
 
 @bot.command(pass_context=True)
 async def give(ctx, target, amt):
+    """discord command to give points to target"""
     global users
     global points
     index = find_index(ctx.message.author.id)
@@ -241,19 +270,25 @@ async def profile(ctx, target=None):
         target = await bot.fetch_user(target[3:len(target)-1])
     index = find_index(target.id)
     owner = await bot.fetch_user(int(owned_by[index][0]))
-    response = f"***{target.mention}'s Profile:***\n" + POINT_NAME + " : " + str(int(points[index])) + "\n" + "**Owner : **" + f"{owner.mention}" + " for *" + str(owned_by[index][1]) + "* " + POINT_NAME + ".\n" + "**Inventory :**\n"
+    embed = discord.Embed(
+        color=target.color,
+        description=str(int(points[find_index(target.id)])) + " " + POINT_NAME,
+        title=f"**{target.name}'s Profile**"
+    )
+    embed.set_thumbnail(url=target.avatar_url)
+    embed.add_field(name="**Owner**", value=f"{owner.mention} for *" + str(owned_by[index][1]) + "* " + POINT_NAME)
     amt = 0
+    inv = ""
     try:
-        response += "```"
         for x in inventory[index]:
             amt += 1
-            response += str(await bot.fetch_user(int(x))) + "\n"
+            inv += str(await bot.fetch_user(int(x))) + "\n"
         if amt == 0:
-            response += "No One"
-        response += "```"
+            inv += "No One"
     except IndexError:
         pass
-    await ctx.channel.send(response)
+    embed.add_field(name="**Inventory**", value=inv)
+    await ctx.channel.send(embed=embed)
 
 @bot.command(pass_context=True)
 async def buy(ctx, target=None, bid=None):
@@ -301,4 +336,25 @@ async def sell(ctx, target=None):
             points[find_index(ctx.message.author.id)] += returned_money
             owned_by[find_index(user.id)][1] = 200
             await ctx.channel.send(f"{ctx.message.author.mention}, sold " + f"{user.mention}" + " for " + str(returned_money) + " " + POINT_NAME + "!")
+
+@bot.command(pass_context=True)
+async def leaderboard(ctx):
+    """discord command to see leaderboard"""
+    global points
+    global users
+    ranked_users = [users for _,users in sorted(zip(points,users),reverse=True)]
+    counter = 1
+    embed = discord.Embed(
+        color=bot.user.color,
+        title=":peach: Leaderboard"
+    )
+    for index in range(9):
+        try:
+            player = await bot.fetch_user(int(ranked_users[index]))
+            embed.add_field(name="**#" + str(counter) + " " + player.name + "**", value=str(int(points[find_index(ranked_users[index])])) + " :peach:\n\n")
+            counter += 1
+        except IndexError:
+            break
+    await ctx.channel.send(embed=embed)
+
 bot.run(DISCORD_TOKEN)
