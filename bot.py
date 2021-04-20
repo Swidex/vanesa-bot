@@ -15,7 +15,7 @@ timer = []
 inventory = []
 owned_by = []
 POINT_NAME = ":peach:"
-DAILY_TIMER = 24
+DAILY_TIMER = 12
 DAILY_AMT = 200
 
 @tasks.loop(minutes=30)
@@ -172,6 +172,8 @@ async def duel(ctx, target=None, amt=None):
     """discord command for dueling players"""
     global users
     global points
+    if amt.lower() == "all":
+            amt = points[find_index(ctx.message.author.id)]
     index = find_index(ctx.message.author.id)
     if amt==None or target==None:
         await ctx.channel.send(f"{ctx.message.author.mention}, please provide more arguments.")
@@ -222,6 +224,8 @@ async def duel(ctx, target=None, amt=None):
 @bot.command(pass_context=True)
 async def tails(ctx, amt=None):
     """discord command for playing heads or tails"""
+    if amt.lower() == "all":
+            amt = points[find_index(ctx.message.author.id)]
     if amt == None or int(amt) <= 0:
         await ctx.channel.send(f"{ctx.message.author.mention}, please bet a valid amount.")
     elif int(amt) > points[find_index(ctx.message.author.id)]:
@@ -232,6 +236,8 @@ async def tails(ctx, amt=None):
 @bot.command(pass_context=True)
 async def heads(ctx, amt=None):
     """discord command for playing heads or tails"""
+    if amt.lower() == "all":
+            amt = points[find_index(ctx.message.author.id)]
     if amt == None or int(amt) <= 0:
         await ctx.channel.send(f"{ctx.message.author.mention}, please bet a valid amount.")
     elif int(amt) > points[find_index(ctx.message.author.id)]:
