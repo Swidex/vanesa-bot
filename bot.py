@@ -152,7 +152,7 @@ async def daily(ctx):
             claim_time = str(round(claim_time.seconds / 60)) + " Minutes"
         embed.description = f"{ctx.message.author.name}, you have already claimed your daily amount."
         embed.add_field(name="Next Claim:",value="~" + claim_time)
-    if not isinstance(albion_integration[index][0],int):
+    try:
         fame_diff = await reward_points(index)
         embed.description += "\n\nYou gained an additional " + str(int(fame_diff)) + " PvP Fame since last update!"
         extra_points = math.floor(fame_diff/20000)
@@ -162,6 +162,8 @@ async def daily(ctx):
             points[index] += extra_points*20000
         else:
             embed.description += "\nYou do not meet the threshold to gain more " + POINT_NAME + "."
+    except urllib.error.HTTPError:
+        pass
     await ctx.channel.send(embed=embed)
 
 @bot.command(pass_context=True)
