@@ -422,8 +422,16 @@ async def sell(ctx, target=None):
         else:
             try:
                 for players in inventory:
+                    try:
+                        players = players.tolist()
+                    except AttributeError:
+                        pass
                     players.remove(user.id)
             except ValueError:
+                pass
+            try:
+                inventory[find_index(user.id)] = inventory[find_index(user.id)].tolist()
+            except AttributeError:
                 pass
             inventory[find_index(user.id)].append(user.id)
             owned_by[find_index(user.id)][0] = user.id
