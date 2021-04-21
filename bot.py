@@ -389,11 +389,11 @@ async def buy(ctx, target=None, bid=None):
         if owned_by[find_index(user.id)][0] == ctx.message.author.id:
             await ctx.channel.send(f"{ctx.message.author.mention}, you already own this user!")
         elif int(bid) > int(owned_by[find_index(user.id)][1]):
-            try:
-                for players in inventory:
+            for players in inventory:
+                try:
                     players.remove(user.id)
-            except ValueError:
-                pass
+                except ValueError:
+                    continue
             inventory[find_index(ctx.message.author.id)].append(user.id)
             owned_by[find_index(user.id)][0] = ctx.message.author.id
             owned_by[find_index(user.id)][1] = bid
