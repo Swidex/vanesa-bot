@@ -314,7 +314,7 @@ async def admin_give(ctx, target, amt):
     """discord command for giving stimmies"""
     if str(ctx.message.author) == 'Swidex#2907':
         target = await bot.fetch_user(target[3:len(target)-1])
-        points[find_index(target)] += int(amt)
+        points[find_index(target.id)] += int(amt)
         await ctx.channel.send(f"{ctx.message.author.mention} gave " + amt + " " + POINT_NAME + " to " + target.name)
     else:
         await ctx.channel.send("You have insufficient priveleges for this command.")
