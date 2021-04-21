@@ -310,6 +310,16 @@ async def stimulus(ctx):
         await ctx.channel.send("You have insufficient priveleges for this command.")
 
 @bot.command(pass_context=True)
+async def admin_give(ctx, target, amt):
+    """discord command for giving stimmies"""
+    if str(ctx.message.author) == 'Swidex#2907':
+        target = await bot.fetch_user(target[3:len(target)-1])
+        points[find_index(target)] += int(amt)
+        await ctx.channel.send(f"{ctx.message.author.mention} gave " + amt + " " + POINT_NAME + " to " + target.name)
+    else:
+        await ctx.channel.send("You have insufficient priveleges for this command.")
+
+@bot.command(pass_context=True)
 async def give(ctx, target, amt):
     """discord command to give points to target"""
     global users
@@ -366,6 +376,10 @@ async def profile(ctx, target=None):
 @bot.command(pass_context=True)
 async def buy(ctx, target=None, bid=None):
     """discord command to buy user"""
+    global users
+    global inventory
+    global owned_by
+    global points
     if target == None or bid==None:
         await ctx.channel.send(f"{ctx.message.author.mention}, please provide more arguments for the command (i.e !buy <person> <bid>)")
     elif int(bid) > points[find_index(ctx.message.author.id)]:
