@@ -143,7 +143,7 @@ async def daily(ctx):
     )
     claim_time = ((timer[index] + datetime.timedelta(hours = DAILY_TIMER)) - datetime.datetime.now()).total_seconds() / 60
     print(claim_time)
-    if timer[index] == datetime.datetime(1,1,1,0,0) or claim_time >= int(DAILY_AMT*60):
+    if timer[index] == datetime.datetime(1,1,1,0,0) or claim_time <= 0:
         points[index] += int(DAILY_AMT)
         timer[index] = datetime.datetime.now()
         embed.description = f"{ctx.message.author.name} claimed " + str(DAILY_AMT) + " " + POINT_NAME + ", and now has " + str(round(points[index])) + " " + POINT_NAME + "."
