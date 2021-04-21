@@ -141,7 +141,7 @@ async def daily(ctx):
         title="**Daily Rewards " + POINT_NAME + "**",
         color=ctx.message.author.color
     )
-    claim_time = (datetime.datetime.now() - (timer[index] + datetime.timedelta(hours = DAILY_TIMER))).total_seconds() / 60
+    claim_time = (datetime.datetime.now() - (timer[index] + datetime.timedelta(hours = DAILY_TIMER))) / 60
     print(claim_time)
     if timer[index] == datetime.datetime(1,1,1,0,0) or claim_time >= int(DAILY_AMT*60):
         points[index] += int(DAILY_AMT)
