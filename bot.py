@@ -391,7 +391,10 @@ async def buy(ctx, target=None, bid=None):
         elif int(bid) > int(owned_by[find_index(user.id)][1]):
             try:
                 for players in inventory:
-                    players = players.tolist()
+                    try:
+                        players = players.tolist()
+                    except AttributeError:
+                        pass
                     players.remove(user.id)
             except ValueError:
                 pass
