@@ -141,17 +141,17 @@ async def daily(ctx):
         title="**Daily Rewards " + POINT_NAME + "**",
         color=ctx.message.author.color
     )
-    print(((datetime.datetime.now() - timer[index]).total_seconds() / 60))
-    if timer[index] == datetime.datetime(1,1,1,0,0) or ((datetime.datetime.now() - timer[index]).total_seconds() / 60) >= int(DAILY_AMT*60):
+    claim_time = (datetime.datetime.now() - (timer[index] + datetime.timedelta(hours = DAILY_TIMER))).total_seconds() / 60
+    print(claim_time)
+    if timer[index] == datetime.datetime(1,1,1,0,0) or claim_time >= int(DAILY_AMT*60):
         points[index] += int(DAILY_AMT)
         timer[index] = datetime.datetime.now()
         embed.description = f"{ctx.message.author.name} claimed " + str(DAILY_AMT) + " " + POINT_NAME + ", and now has " + str(round(points[index])) + " " + POINT_NAME + "."
     else:
-        claim_time = (timer[index] + datetime.timedelta(hours = DAILY_TIMER)) - datetime.datetime.now()
-        if (claim_time.seconds / 3600) <= 3600:
+        if (claim_time.seconds / 60) <= 3600:
             claim_time = str(round(claim_time.seconds / 3600)) + " Hours"
         else:
-            claim_time = str(round(claim_time.seconds / 60)) + " Minutes"
+            claim_time = str(round(claim_time.seconds)) + " Minutes"
         embed.description = f"{ctx.message.author.name}, you have already claimed your daily amount."
         embed.add_field(name="Next Claim:",value="~" + claim_time)
     try:
