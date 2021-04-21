@@ -130,7 +130,8 @@ async def get_albion_data(player_id):
 async def reward_points(index):
     """reward points based on how often"""
     curr_fame = await get_albion_data(albion_integration[index][0])
-    return int(curr_fame['KillFame']) - int(albion_integration[index][1])
+    diff = int(curr_fame['KillFame']) - int(albion_integration[index][1])
+    return int(diff)
 
 @bot.command(pass_context=True)
 async def daily(ctx):
