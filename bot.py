@@ -380,6 +380,7 @@ async def buy(ctx, target=None, bid=None):
     global inventory
     global owned_by
     global points
+    inventory = inventory.tolist()
     if target == None or bid==None:
         await ctx.channel.send(f"{ctx.message.author.mention}, please provide more arguments for the command (i.e !buy <person> <bid>)")
     elif int(bid) > points[find_index(ctx.message.author.id)]:
@@ -389,11 +390,11 @@ async def buy(ctx, target=None, bid=None):
         if owned_by[find_index(user.id)][0] == ctx.message.author.id:
             await ctx.channel.send(f"{ctx.message.author.mention}, you already own this user!")
         elif int(bid) > int(owned_by[find_index(user.id)][1]):
-            for players in inventory:
-                try:
-                    players = players[players != user.id]
-                except ValueError:
-                    continue
+            try:
+                for players in inventory:
+                    players.remove(user.id)
+            except ValueError:
+                pass
             inventory[find_index(ctx.message.author.id)].append(user.id)
             owned_by[find_index(user.id)][0] = ctx.message.author.id
             owned_by[find_index(user.id)][1] = bid
