@@ -130,7 +130,7 @@ async def get_albion_data(player_id):
 async def reward_points(index):
     """reward points based on how often"""
     curr_fame = await get_albion_data(albion_integration[index][0])
-    return curr_fame['KillFame'] - albion_integration[index][1]
+    return curr_fame['KillFame'] - int(albion_integration[index][1])
 
 @bot.command(pass_context=True)
 async def daily(ctx):
@@ -159,6 +159,7 @@ async def daily(ctx):
         if extra_points > 0:
             embed.description += "\nFrom this, you will gain " + str(int(extra_points*200)) + " " + POINT_NAME + "!"
             albion_integration[index][1] += fame_diff
+            points[index] += extra_points*200
         else:
             embed.description += "\nYou do not meet the threshold to gain more " + POINT_NAME + "."
     await ctx.channel.send(embed=embed)
