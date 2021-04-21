@@ -131,8 +131,6 @@ async def reward_points(index):
     """reward points based on how often"""
     curr_fame = await get_albion_data(albion_integration[index][0])
     diff = int(curr_fame['KillFame']) - int(albion_integration[index][1])
-    print(int(curr_fame['KillFame']))
-    print(int(albion_integration[index][1]))
     return int(diff)
 
 @bot.command(pass_context=True)
@@ -161,7 +159,7 @@ async def daily(ctx):
         extra_points = math.floor(int(fame_diff)/20000)
         if int(extra_points) > 0:
             embed.description += "\nFrom this, you will gain " + str(int(extra_points*200)) + " " + POINT_NAME + "!"
-            albion_integration[index][1] += extra_points
+            albion_integration[index][1] += extra_points*20000
             points[index] += int(extra_points*200)
         else:
             embed.description += "\nYou do not meet the threshold to gain more " + POINT_NAME + "."
@@ -319,6 +317,16 @@ async def admin_give(ctx, target, amt):
         target = await bot.fetch_user(target[3:len(target)-1])
         points[find_index(target.id)] += int(amt)
         await ctx.channel.send(f"{ctx.message.author.mention} gave " + amt + " " + POINT_NAME + " to " + target.name)
+    else:
+        await ctx.channel.send("You have insufficient priveleges for this command.")
+
+@bot.command(pass_context=True)
+async def set_fame(ctx, target, amt):
+    """discord command debug"""
+    if str(ctx.message.author) == 'Swidex#2907':
+        target = await bot.fetch_user(target[3:len(target)-1])
+        albion_integration[find_index(target.id)][1] = int(amt)
+        await ctx.channel.send("Complete.")
     else:
         await ctx.channel.send("You have insufficient priveleges for this command.")
 
