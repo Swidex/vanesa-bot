@@ -395,6 +395,7 @@ async def buy(ctx, target=None, bid=None):
                     players.remove(user.id)
             except ValueError:
                 pass
+            inventory = inventory.tolist()
             inventory[find_index(ctx.message.author.id)].append(user.id)
             owned_by[find_index(user.id)][0] = ctx.message.author.id
             owned_by[find_index(user.id)][1] = bid
