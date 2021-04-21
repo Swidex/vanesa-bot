@@ -155,8 +155,8 @@ async def daily(ctx):
     try:
         fame_diff = await reward_points(index)
         embed.description += "\n\nYou gained an additional " + str(int(fame_diff)) + " PvP Fame since last update!"
-        extra_points = math.floor(fame_diff/20000)
-        if extra_points > 0:
+        extra_points = math.floor(int(fame_diff)/20000)
+        if int(extra_points) > 0:
             embed.description += "\nFrom this, you will gain " + str(int(extra_points*200)) + " " + POINT_NAME + "!"
             albion_integration[index][1] += extra_points
             points[index] += extra_points*20000
