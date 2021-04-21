@@ -391,12 +391,10 @@ async def buy(ctx, target=None, bid=None):
         elif int(bid) > int(owned_by[find_index(user.id)][1]):
             try:
                 for players in inventory:
-                    players = players.tolist()
-                    players.remove(user.id)
+                    players.tolist().remove(user.id)
             except ValueError:
                 pass
-            inventory = inventory.tolist()
-            inventory[find_index(ctx.message.author.id)].append(user.id)
+            inventory[find_index(ctx.message.author.id)].tolist().append(user.id)
             owned_by[find_index(user.id)][0] = ctx.message.author.id
             owned_by[find_index(user.id)][1] = bid
             points[find_index(ctx.message.author.id)] -= int(bid)
