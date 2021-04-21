@@ -152,7 +152,7 @@ async def daily(ctx):
             claim_time = str(round(claim_time.seconds / 60)) + " Minutes"
         embed.description = f"{ctx.message.author.name}, you have already claimed your daily amount."
         embed.add_field(name="Next Claim:",value="~" + claim_time)
-    if not albion_integration[index][0]==0:
+    if not int(albion_integration[index][0])==0:
         fame_diff = await reward_points(index)
         embed.description += "\n\nYou gained an additional " + str(int(fame_diff)) + " PvP Fame since last update!"
         extra_points = math.floor(fame_diff/20000)
