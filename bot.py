@@ -131,8 +131,6 @@ async def reward_points(index):
     """reward points based on how often"""
     curr_fame = await get_albion_data(albion_integration[index][0])
     diff = int(curr_fame['KillFame']) - int(albion_integration[index][1])
-    print(int(curr_fame['KillFame']))
-    print(int(albion_integration[index][1]))
     return int(diff)
 
 @bot.command(pass_context=True)
@@ -143,6 +141,7 @@ async def daily(ctx):
         title="**Daily Rewards " + POINT_NAME + "**",
         color=ctx.message.author.color
     )
+    print(((datetime.datetime.now() - timer[index]).total_seconds() / 60))
     if timer[index] == datetime.datetime(1,1,1,0,0) or ((datetime.datetime.now() - timer[index]).total_seconds() / 60) >= int(DAILY_AMT*60):
         points[index] += int(DAILY_AMT)
         timer[index] = datetime.datetime.now()
