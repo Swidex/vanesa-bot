@@ -391,7 +391,7 @@ async def buy(ctx, target=None, bid=None):
         elif int(bid) > int(owned_by[find_index(user.id)][1]):
             for players in inventory:
                 try:
-                    players.remove(user.id)
+                    players = players[players != user.id]
                 except ValueError:
                     continue
             inventory[find_index(ctx.message.author.id)].append(user.id)
