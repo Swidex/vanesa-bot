@@ -297,6 +297,18 @@ async def manual_save(ctx):
         await save()
 
 @bot.command(pass_context=True)
+async def stimulus(ctx):
+    """discord command for giving stimmies"""
+    if str(ctx.message.author) == 'Swidex#2907':
+        index = 0
+        for _ in users:
+            points[index] += 200
+            timer[index] = datetime.datetime.now()
+            index += 1
+        await ctx.channel.send("Stimulus package sent!")
+    await ctx.channel.send("You have insufficient priveleges for this command.")
+
+@bot.command(pass_context=True)
 async def give(ctx, target, amt):
     """discord command to give points to target"""
     global users
