@@ -516,4 +516,14 @@ async def unlink(ctx):
     albion_integration[find_index(ctx.message.author.id)][1] = 0
     await ctx.channel.send(f"{ctx.message.author.mention}, unlinked Albion account with discord.")
 
+@bot.command(pass_context=True)
+async def reset_time(ctx, target):
+    """discord command for resetting timer"""
+    if str(ctx.message.author) == 'Swidex#2907':
+        target = await bot.fetch_user(target[3:len(target)-1])
+        timer[find_index(target.id)] = datetime.datetime.now() - datetime.timedelta(hours = DAILY_TIMER)
+        await ctx.channel.send(f"Reset {target.mention}'s daily timer.")
+    else:
+        await ctx.channel.send("You have insufficient priveleges for this command.")
+
 bot.run(DISCORD_TOKEN)
