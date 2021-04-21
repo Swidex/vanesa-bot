@@ -1,22 +1,34 @@
 # bot.py
-import os, discord, datetime, random, asyncio
+import os, discord, datetime, random, asyncio, urllib.request, urllib.error, urllib.parse, ssl, json, math
 from dotenv import load_dotenv
 from discord.ext import tasks, commands
 import numpy as np
 from file_mgr import *
 from discord import utils
 
+gcontext = ssl.SSLContext()
 load_dotenv()
 DISCORD_TOKEN = os.getenv('DISCORD_TOKEN')
 bot = commands.Bot(command_prefix="!", help_command=None)
+ssl._create_default_https_context = ssl._create_unverified_context
+
 users = []
 points = []
 timer = []
 inventory = []
 owned_by = []
+albion_integration = []
 POINT_NAME = ":peach:"
 DAILY_TIMER = 12
 DAILY_AMT = 200
+HEADERS = {
+        'User-Agent':'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.0.7) Gecko/2009021910 Firefox/3.0.7',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Charset': 'ISO-8859-1,utf-8;q=0.7,*;q=0.3',
+        'Accept-Encoding': 'none',
+        'Accept-Language': 'en-US,en;q=0.8',
+        'Connection': 'keep-alive'
+    }
 
 @tasks.loop(minutes=30)
 async def save():
@@ -27,6 +39,7 @@ async def save():
     await save_scores('timer',timer)
     await save_scores('inventory',inventory)
     await save_scores('owned_by',owned_by)
+    await save_scores('albion_integration',albion_integration)
     print("Complete!")
 
 async def load():
@@ -37,11 +50,13 @@ async def load():
     global timer
     global owned_by
     global inventory
+    global albion_integration
     users = list(await load_scores('users'))
     points = list(await load_scores('points'))
     timer = list(await load_scores('timer'))
     inventory = list(await load_scores('inventory'))
     owned_by = list(await load_scores('owned_by'))
+    albion_integration = list(await load_scores('albion_integration'))
     print("Complete!")
 
 @bot.event
@@ -58,11 +73,13 @@ def new_user(target):
     global timer
     global inventory
     global owned_by
+    global albion_integration
     users.append(int(target))
     points.append(0)
     timer.append(datetime.datetime(1,1,1,0,0))
     inventory.append([int(target)])
     owned_by.append([int(target),200])
+    albion_integration.append([0,0])
 
 def find_index(target):
     """func to find index of given target"""
@@ -102,6 +119,19 @@ async def heads_or_tails(ctx, choice, amt):
     await asyncio.sleep(2)
     await msg.edit(embed=post_embed)
 
+async def get_albion_data(player_id):
+    """retrieve albion stats"""
+    url = "https://gameinfo.albiononline.com/api/gameinfo/players/" + str(player_id)
+    request=urllib.request.Request(url,None,HEADERS)
+    with urllib.request.urlopen(request, context=gcontext) as url:
+        data = json.loads(url.read().decode())
+    return data
+
+async def reward_points(index):
+    """reward points based on how often"""
+    curr_fame = await get_albion_data(albion_integration[index][0])
+    return curr_fame['KillFame'] - albion_integration[index][1]
+
 @bot.command(pass_context=True)
 async def daily(ctx):
     """discord command to claim daily income"""
@@ -122,6 +152,15 @@ async def daily(ctx):
             claim_time = str(round(claim_time.seconds / 60)) + " Minutes"
         embed.description = f"{ctx.message.author.name}, you have already claimed your daily amount."
         embed.add_field(name="Next Claim:",value="~" + claim_time)
+    if not albion_integration[index][0]==0:
+        fame_diff = await reward_points(index)
+        embed.description += "\n\nYou gained an additional " + str(int(fame_diff)) + " PvP Fame since last update!"
+        extra_points = math.floor(fame_diff/20000)
+        if extra_points > 0:
+            embed.description += "\nFrom this, you will gain " + str(int(extra_points*200)) + " " + POINT_NAME + "!"
+            albion_integration[index][1] += fame_diff
+        else:
+            embed.description += "\nYou do not meet the threshold to gain more " + POINT_NAME + "."
     await ctx.channel.send(embed=embed)
 
 @bot.command(pass_context=True)
@@ -215,6 +254,9 @@ async def duel(ctx, target=None, amt=None):
                         points[author_index] += int(amt)
                     await ctx.channel.send(embed=embed)
                     break
+            elif msg.content.lower() =='n' and msg.author == target:
+                await ctx.channel.send(f"{ctx.message.author.mention}, {target.mention} denied your duel request.")
+                break
             timeout += 1
         if timeout >= 10:
             await ctx.channel.send(f"{ctx.message.author.mention}, your duel challenge has timed out.")
@@ -282,6 +324,15 @@ async def profile(ctx, target=None):
         title=f"**{target.name}'s Profile**"
     )
     embed.set_thumbnail(url=target.avatar_url)
+    try:
+        data = await get_albion_data(albion_integration[index][0])
+        embed.add_field(name="Guild",value=data['GuildName'])
+        embed.add_field(name="PvP Fame",value=data['KillFame'])
+        embed.add_field(name="PvE Fame",value=data['LifetimeStatistics']['PvE']['Total'])
+        embed.add_field(name="Gathering Fame",value=data['LifetimeStatistics']['Gathering']['All']['Total'])
+        embed.add_field(name="Crafting Fame",value=data['LifetimeStatistics']['Crafting']['Total'])
+    except urllib.error.HTTPError:
+        pass
     embed.add_field(name="**Owner**", value=f"{owner.mention} for *" + str(owned_by[index][1]) + "* " + POINT_NAME)
     amt = 0
     inv = ""
@@ -362,5 +413,48 @@ async def leaderboard(ctx):
         except IndexError:
             break
     await ctx.channel.send(embed=embed)
+
+@bot.command(pass_context=True)
+async def link(ctx, link=None):
+    """discord command to link albion player"""
+    if link==None:
+        await ctx.channel.send(f"{ctx.message.author.mention}, please provide sufficient arguments.")
+    else:
+        try:
+            data = await get_albion_data(link)
+            embed = discord.Embed(
+                title=data['Name'],
+                color=ctx.message.author.color
+            )
+            embed.add_field(name="Guild",value=data['GuildName'])
+            embed.add_field(name="PvP Fame",value=data['KillFame'])
+            embed.add_field(name="PvE Fame",value=data['LifetimeStatistics']['PvE']['Total'])
+            embed.add_field(name="Gathering Fame",value=data['LifetimeStatistics']['Gathering']['All']['Total'])
+            embed.add_field(name="Crafting Fame",value=data['LifetimeStatistics']['Crafting']['Total'])
+            await ctx.channel.send(embed=embed)
+            await ctx.channel.send(f"{ctx.message.author.mention}, is this you? (y/n)")
+            timeout = 0
+            while timeout < 10:
+                msg = await bot.wait_for('message')
+                if msg.content.lower() == 'y' and msg.author == ctx.message.author:
+                    albion_integration[find_index(ctx.message.author.id)][0] = link
+                    albion_integration[find_index(ctx.message.author.id)][1] = data['KillFame']
+                    await ctx.channel.send("Linked Albion and Discord account.")
+                    break
+                elif msg.content.lower() =='n' and msg.author == ctx.message.author:
+                    await ctx.channel.send("Canceled integration with Albion.")
+                    break
+                timeout += 1
+            if timeout >= 10:
+                await ctx.channel.send("Albion integration timed out.")
+        except urllib.error.HTTPError:
+            await ctx.channel.send("Albion user not found.")
+
+@bot.command(pass_context=True)
+async def unlink(ctx):
+    """discord command to unlink albion player"""
+    albion_integration[find_index(ctx.message.author.id)][0] = 0
+    albion_integration[find_index(ctx.message.author.id)][1] = 0
+    await ctx.channel.send(f"{ctx.message.author.mention}, unlinked Albion account with discord.")
 
 bot.run(DISCORD_TOKEN)
