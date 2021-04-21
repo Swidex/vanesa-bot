@@ -158,8 +158,8 @@ async def daily(ctx):
         extra_points = math.floor(fame_diff/20000)
         if extra_points > 0:
             embed.description += "\nFrom this, you will gain " + str(int(extra_points*200)) + " " + POINT_NAME + "!"
-            albion_integration[index][1] += fame_diff
-            points[index] += extra_points*200
+            albion_integration[index][1] += extra_points
+            points[index] += extra_points*20000
         else:
             embed.description += "\nYou do not meet the threshold to gain more " + POINT_NAME + "."
     await ctx.channel.send(embed=embed)
