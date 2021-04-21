@@ -131,6 +131,8 @@ async def reward_points(index):
     """reward points based on how often"""
     curr_fame = await get_albion_data(albion_integration[index][0])
     diff = int(curr_fame['KillFame']) - int(albion_integration[index][1])
+    print(int(curr_fame['KillFame']))
+    print(int(albion_integration[index][1]))
     return int(diff)
 
 @bot.command(pass_context=True)
