@@ -143,7 +143,7 @@ async def daily(ctx):
         title="**Daily Rewards " + POINT_NAME + "**",
         color=ctx.message.author.color
     )
-    if timer[index] == datetime.datetime(1,1,1,0,0) or ((datetime.datetime.now() - timer[index]).total_seconds() / 60) >= 1440:
+    if timer[index] == datetime.datetime(1,1,1,0,0) or ((datetime.datetime.now() - timer[index]).total_seconds() / 60) >= 720:
         points[index] += int(DAILY_AMT)
         timer[index] = datetime.datetime.now()
         embed.description = f"{ctx.message.author.name} claimed " + str(DAILY_AMT) + " " + POINT_NAME + ", and now has " + str(round(points[index])) + " " + POINT_NAME + "."
