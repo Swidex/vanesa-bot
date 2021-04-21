@@ -306,7 +306,8 @@ async def stimulus(ctx):
             timer[index] = datetime.datetime.now()
             index += 1
         await ctx.channel.send("Stimulus package sent!")
-    await ctx.channel.send("You have insufficient priveleges for this command.")
+    else:
+        await ctx.channel.send("You have insufficient priveleges for this command.")
 
 @bot.command(pass_context=True)
 async def give(ctx, target, amt):
