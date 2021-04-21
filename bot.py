@@ -402,15 +402,15 @@ async def buy(ctx, target=None, bid=None):
         if owned_by[find_index(user.id)][0] == ctx.message.author.id:
             await ctx.channel.send(f"{ctx.message.author.mention}, you already own this user!")
         elif int(bid) > int(owned_by[find_index(user.id)][1]):
-            try:
-                for players in inventory:
-                    try:
-                        players = players.tolist()
-                    except AttributeError:
-                        pass
+            for players in inventory:
+                try:
+                    players = players.tolist()
+                except AttributeError:
+                    pass
+                try:
                     players.remove(user.id)
-            except ValueError:
-                pass
+                except ValueError:
+                    pass
             try:
                 inventory[find_index(ctx.message.author.id)] = inventory[find_index(ctx.message.author.id)].tolist()
             except AttributeError:
@@ -433,15 +433,15 @@ async def sell(ctx, target=None):
         if user.id == ctx.message.author.id:
             await ctx.channel.send(f"{ctx.message.author.mention}, you cannot sell yourself!")
         else:
-            try:
-                for players in inventory:
-                    try:
-                        players = players.tolist()
-                    except AttributeError:
-                        pass
+            for players in inventory:
+                try:
+                    players = players.tolist()
+                except AttributeError:
+                    pass
+                try:
                     players.remove(user.id)
-            except ValueError:
-                pass
+                except ValueError:
+                    pass
             try:
                 inventory[find_index(user.id)] = inventory[find_index(user.id)].tolist()
             except AttributeError:
