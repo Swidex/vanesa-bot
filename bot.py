@@ -254,6 +254,8 @@ async def duel(ctx, target=None, amt=None):
                         embed.description = ctx.message.author.name + " gains " + amt + " " + POINT_NAME + " and " + target.name + " loses " + amt + " " + POINT_NAME + "!"
                         points[target_index] -= int(amt)
                         points[author_index] += int(amt)
+                    embed.add_field(name=f"{ctx.message.author.name}'s' Roll", value=roll_author)
+                    embed.add_field(name=f"{target.name}'s' Roll", value=roll_target)
                     await ctx.channel.send(embed=embed)
                     break
             elif msg.content.lower() =='n' and msg.author == target:
