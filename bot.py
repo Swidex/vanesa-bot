@@ -243,11 +243,11 @@ async def is_admin(ctx):
         await ctx.channel.send(f"{ctx.message.author.mention}" + INSUFFICIENT_PRIV)
         return False
 
-async def check_reaction(ctx, message, time, reaction):
+async def check_reaction(ctx, message, time, usr_rea):
     """funct to check for reaction"""
     def check(reaction, user):
-        user == ctx.author and str(reaction.emoji) == reaction
-    await message.add_reaction(reaction)
+        user == ctx.author and str(reaction.emoji) == usr_rea
+    await message.add_reaction(usr_rea)
     try:
         reaction, user = await bot.wait_for('reaction_add', timeout=time, check=check)
     except asyncio.TimeoutError:
