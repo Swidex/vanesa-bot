@@ -268,12 +268,13 @@ async def ticket(ctx, amt=None):
             for player in lottery[2]:
                 if ctx.message.author.id == player[0]:
                     player[1] += amt
-                    points[find_index(player[0])] -= amt*TICKET_PRICE
+                    points[ctx.message.author.id] -= amt*TICKET_PRICE
                     lottery[1] += amt*TICKET_PRICE
                     await ctx.channel.send(f"{ctx.message.author.mention} successfully bought " + str(amt) + " tickets for " + str(amt*TICKET_PRICE) + " " + POINT_NAME + "!")
                     return True
             await ctx.channel.send(f"{ctx.message.author.mention} successfully bought " + str(amt) + " tickets for " + str(amt*TICKET_PRICE) + " " + POINT_NAME + "!")
             lottery[2].append([ctx.message.author.id,amt])
+            points[find_index(ctx.message.author.id)] -= amt*TICKET_PRICE
             lottery[1] += amt*TICKET_PRICE
             points[find_index(lottery[2][len(lottery[2])-1][0])] -= amt*TICKET_PRICE
             return False
