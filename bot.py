@@ -160,7 +160,7 @@ async def daily(ctx):
         extra_points = math.floor(int(fame_diff)/20000)
         if int(extra_points) > 0:
             embed.description += "\nFrom this, you will gain " + str(int(extra_points*200)) + " " + POINT_NAME + "!"
-            albion_integration[index][1] += int(extra_points)*20000
+            albion_integration[index][1] = int(albion_integration[index][1]) + int(extra_points)*20000
             points[index] += int(extra_points*200)
         else:
             embed.description += "\nYou do not meet the threshold to gain more " + POINT_NAME + "."
@@ -495,8 +495,8 @@ async def link(ctx, link=None):
             while timeout < 10:
                 msg = await bot.wait_for('message')
                 if msg.content.lower() == 'y' and msg.author == ctx.message.author:
-                    albion_integration[find_index(ctx.message.author.id)][0] = link
-                    albion_integration[find_index(ctx.message.author.id)][1] = data['KillFame']
+                    albion_integration[find_index(ctx.message.author.id)][0] = int(link)
+                    albion_integration[find_index(ctx.message.author.id)][1] = int(data['KillFame'])
                     await ctx.channel.send("Linked Albion and Discord account.")
                     break
                 elif msg.content.lower() =='n' and msg.author == ctx.message.author:
