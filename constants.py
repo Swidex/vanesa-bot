@@ -1,7 +1,7 @@
 POINT_NAME = ":peach:"
 DAILY_TIMER = 12
 DAILY_AMT = 200
-ADMINS = ["Swidex#2907","Swidex"]
+ADMINS = ["Swidex#2907"]
 INSUFFICIENT_PRIV = ", you do not have sufficient priveleges."
 INSUFFICIENT_POINTS = ", you have insufficient " + POINT_NAME + " for this."
 INVALID_ARGS = ", please provide proper arguments, check #commands for proper usage."
