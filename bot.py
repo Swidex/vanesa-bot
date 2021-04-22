@@ -585,14 +585,14 @@ async def link(ctx, link=None):
             embed.add_field(name="Gathering Fame",value=data['LifetimeStatistics']['Gathering']['All']['Total'])
             embed.add_field(name="Crafting Fame",value=data['LifetimeStatistics']['Crafting']['Total'])
             await ctx.channel.send(embed=embed)
-            message = await ctx.channel.send(f"{ctx.message.author.mention}, is this you? (y/n)")
+            message = await ctx.channel.send(f"{ctx.message.author.mention}, is this you?")
             await message.add_reaction("✅")
             try:
                 reaction, user = await bot.wait_for('reaction_add', timeout=60.0, check=check)
             except asyncio.TimeoutError:
                 await ctx.channel.send(f"{ctx.message.author.mention} canceled linking process.")
             else:
-                albion_integration[find_index(ctx.message.author.id)][0] = int(link)
+                albion_integration[find_index(ctx.message.author.id)][0] = str(link)
                 albion_integration[find_index(ctx.message.author.id)][1] = int(data['KillFame'])
                 await ctx.channel.send("Linked Albion and Discord account.")
         except urllib.error.HTTPError:
