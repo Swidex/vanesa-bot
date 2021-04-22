@@ -187,19 +187,22 @@ async def gamble(ctx, arg=None):
                 embed.description = f"{ctx.message.author.name} earned an additional "
             if roll < 66:
                 embed.description = f"{ctx.message.author.name} lost "
-                amt = int(arg)
+                if roll >= 50:
+                    amt = int(arg) / 2
+                else:
+                    amt = int(arg)
                 points[index] -= int(arg)
             elif roll < 75:
-                amt = int(float(arg) * 1.5) - float(arg)
-                points[index] += amt
-            elif roll < 90:
                 amt = int(float(arg) * 2) - float(arg)
                 points[index] += amt
-            elif roll < 100:
+            elif roll < 90:
                 amt = int(float(arg) * 2.5) - float(arg)
                 points[index] += amt
+            elif roll < 100:
+                amt = int(float(arg) * 3) - float(arg)
+                points[index] += amt
             elif roll == 100:
-                amt = int(float(arg) * 3.0) - float(arg)
+                amt = int(float(arg) * 4.0) - float(arg)
                 points[index] += amt
             embed.description += str(int(amt)) + " " + POINT_NAME + ", and now has " + str(int(points[index])) + " " + POINT_NAME + "."
             await ctx.channel.send(embed=embed)
