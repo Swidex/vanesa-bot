@@ -243,23 +243,13 @@ async def is_admin(ctx):
         await ctx.channel.send(f"{ctx.message.author.mention}" + INSUFFICIENT_PRIV)
         return False
 
-async def check_reaction(ctx, message, time, usr_rea):
-    """funct to check for reaction"""
-    def check(reaction, user):
-        user == ctx.author and str(reaction.emoji) == usr_rea
-    await message.add_reaction(usr_rea)
-    try:
-        reaction, user = await bot.wait_for('reaction_add', timeout=time, check=check)
-    except asyncio.TimeoutError:
-        return False
-    else:
-        return True
-
 #DISCORD COMMANDS
 
 @bot.command(pass_context=True)
 async def ticket(ctx, amt=None):
     """buy amt of tickets"""
+    def check(reaction, user):
+        return user == ctx.author and str(reaction.emoji) == reaction
     if amt==None:
         amt = 1
     try:
@@ -277,20 +267,21 @@ async def ticket(ctx, amt=None):
         points[find_index(ctx.message.author.id)] -= amt*TICKET_PRICE
         lottery[1] += amt*TICKET_PRICE
         message = await ctx.channel.send(f"{ctx.message.author.mention} successfully bought " + str(amt) + " tickets for " + str(amt*TICKET_PRICE) + " " + POINT_NAME + "!" + "\n React with ❌ to undo!")
-        if await check_reaction(ctx, message, 60.0, "❌"):
+        await message.add_reaction('❌')
+        try:
+            reaction, user = await bot.wait_for('reaction_add', timeout=60.0, check=())
+        except asyncio.TimeoutError:
+            await message.remove_reaction('❌')
+        else:
             lottery[2][index][1] -= amt
             points[find_index(ctx.message.author.id)] += amt*TICKET_PRICE
             lottery[1] -= amt*TICKET_PRICE
             await message.delete()
             await ctx.channel.send(f"{ctx.message.author.mention}, canceled ticket purchase.")
-        else:
-            await message.remove_reaction("❌")
         if lottery[2][index][1] == 0:
             lottery[2].pop(index)
-        return True
     except ValueError:
         await ctx.channel.send(f"{ctx.message.author.mention}" + INVALID_ARGS)
-        return False
 
 @bot.command(pass_context=True)
 async def daily(ctx):
