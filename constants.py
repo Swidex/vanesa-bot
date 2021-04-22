@@ -1,8 +1,8 @@
 POINT_NAME = ":peach:"
 DAILY_TIMER = 12
 DAILY_AMT = 200
-admins = ["Swidex#2907","CzarKloos#0646"]
-INSUFFICIENT_PRIV = " please provide more arguments."
+ADMINS = ["Swidex#2907","Swidex"]
+INSUFFICIENT_PRIV = ", you do not have sufficient priveleges."
 INSUFFICIENT_POINTS = ", you have insufficient " + POINT_NAME + " for this."
 INVALID_ARGS = ", please provide proper arguments, check #commands for proper usage."
 HEADERS = {
@@ -13,3 +13,5 @@ HEADERS = {
         'Accept-Language': 'en-US,en;q=0.8',
         'Connection': 'keep-alive'
     }
+TICKET_PRICE = 200
+STARTING_POOL = 5000

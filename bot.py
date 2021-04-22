@@ -19,8 +19,23 @@ timer = []
 inventory = []
 owned_by = []
 albion_integration = []
+lottery = [0,0,[]]
 
-@tasks.loop(minutes=30)
+# INTERNAL FUNCTIONS
+
+@bot.event
+async def on_ready():
+    """load data when connected to discord."""
+    print(f'{bot.user} has connected to Discord!')
+    await load()
+    await loop.start()
+
+@tasks.loop(hours=4)
+async def loop():
+    """quad-hourly functions"""
+    await save()
+    await lottery_check()
+
 async def save():
     """saves arrays to file"""
     print("Saving...")
@@ -30,6 +45,7 @@ async def save():
     await save_scores('inventory',inventory)
     await save_scores('owned_by',owned_by)
     await save_scores('albion_integration',albion_integration)
+    await save_scores('lottery',lottery)
     print("Complete!")
 
 async def load():
@@ -41,20 +57,101 @@ async def load():
     global owned_by
     global inventory
     global albion_integration
+    global lottery
     users = list(await load_scores('users'))
     points = list(await load_scores('points'))
     timer = list(await load_scores('timer'))
     inventory = list(await load_scores('inventory'))
     owned_by = list(await load_scores('owned_by'))
     albion_integration = list(await load_scores('albion_integration'))
+    lottery = list(await load_scores('lottery'))
     print("Complete!")
 
-@bot.event
-async def on_ready():
-    """load data when connected to discord."""
-    print(f'{bot.user} has connected to Discord!')
-    await load()
-    await save.start()
+async def continue_lot(channel):
+    """reset lot with no winner"""
+    reset_lottery(lottery[1])
+    embed = discord.Embed(
+        title="Lottery",
+        description="The lottery pool has concluded!\nThere were no winners this time! All tickets have been added to the pool!"
+    )
+    embed.add_field(name="Current Pool", value=str(lottery[1]))
+    time_after_reset = (datetime.datetime.now() - lottery[0]).total_seconds()
+    embed.add_field(name="Time Remaining", value=str(datetime.timedelta(seconds=(259200-time_after_reset))).split(".")[0])
+    curr_players = ""
+    for player in lottery[2]:
+        user = await bot.fetch_user(player[0])
+        curr_players += str(user) + " " + str(player[1]) + "x\n"
+    if curr_players == "":
+        curr_players = "No one"
+    embed.add_field(name="Current Participants", value=str(curr_players))
+    await channel.send(embed=embed)
+
+async def choose_winner(channel):
+    """choose winner of lot"""
+    player_pool = []
+    for player in lottery[2]:
+        for _ in range(player[1]):
+            player_pool.append(player[0])
+    for _ in range(int(len(player_pool)*.1)):
+        player_pool.append(0)
+    roll = round(random.random()*(len(player_pool)-1))
+    if player_pool[roll] == 0:
+        await continue_lot(ctx)
+    else:
+        winner = await bot.fetch_user(player_pool[roll])
+        embed = discord.Embed(
+            title="Lottery",
+            description="The lottery pool has concluded!\nThe winner was " + str(winner) + "!"
+        )
+        embed.set_thumbnail(url=winner.avatar_url)
+        index = 0
+        for player in lottery[2]:
+            if player[0] == winner.id:
+                winner_index = index
+            index += 0
+        embed.add_field(name="Prize", value=str(lottery[1]))
+        points[find_index(player_pool[roll])] += lottery[1]
+        embed.add_field(name="Odds", value=str(lottery[2][winner_index][1])+"/"+str(len(player_pool)))
+        reset_lottery(STARTING_POOL)
+        await channel.send(embed=embed)
+
+def reset_lottery(amt):
+    """func to reset lottery pool"""
+    lottery[0] = datetime.datetime.now()
+    lottery[1] = amt
+    try:
+        for player in lottery[2]:
+            points[find_index(player[0])] += player[1]*TICKET_PRICE
+    except IndexError:
+        pass
+    lottery[2] = []
+    print("Reset Lottery")
+
+async def lottery_check(channel=None):
+    """every 72 hours, play out lottery"""
+    if channel == None:
+        channel = bot.get_channel(810644788344258592)
+    time_after_reset = (datetime.datetime.now() - lottery[0]).total_seconds()
+    if time_after_reset >= 259200:
+        if len(lottery[2]) >= 1:
+            await choose_winner(channel)
+        else:
+            await continue_lot(channel)
+    else:
+        embed = discord.Embed(
+            title="Lottery",
+            description="The lottery pool has not concluded yet!"
+        )
+        embed.add_field(name="Current Pool", value=str(lottery[1]))
+        embed.add_field(name="Time Remaining", value=str(datetime.timedelta(seconds=(259200-time_after_reset))).split(".")[0])
+        curr_players = ""
+        for player in lottery[2]:
+            user = await bot.fetch_user(player[0])
+            curr_players += str(user) + " " + str(player[1]) + "x\n"
+        if curr_players == "":
+            curr_players = "No one"
+        embed.add_field(name="Current Participants", value=str(curr_players))
+        await channel.send(embed=embed)
 
 def new_user(target):
     """append new user to arrays"""
@@ -137,13 +234,48 @@ async def reward_points(index):
 
 async def is_admin(ctx):
     """return whether author is admin"""
-    if ctx.message.author.id in admins:
+    if str(ctx.message.author) in ADMINS:
         return True
     else:
         await ctx.channel.send(f"{ctx.message.author.mention}" + INSUFFICIENT_PRIV)
         return False
 
 #DISCORD COMMANDS
+
+@bot.command(pass_context=True)
+async def ticket(ctx, amt=None):
+    """buy amt of tickets"""
+    def check(reaction, user):
+        return user == ctx.author and str(reaction.emoji) == '✅'
+    if amt==None:
+        amt = 1
+    try:
+        amt = int(amt)
+        if amt*TICKET_PRICE > points[find_index(ctx.message.author.id)]:
+            await ctx.channel.send(f"{ctx.message.author.mention}" + INSUFFICIENT_POINTS)
+            return False
+        message = await ctx.channel.send(f"{ctx.message.author.mention}, are you sure you want to buy " + str(amt) + " tickets for " + str(amt*TICKET_PRICE) + " " + POINT_NAME + "?")
+        await message.add_reaction("✅")
+        try:
+            reaction, user = await bot.wait_for('reaction_add', timeout=60.0, check=check)
+        except asyncio.TimeoutError:
+            await ctx.channel.send(f"{ctx.message.author.mention} canceled ticket purchase.")
+        else:
+            await message.delete()
+            for player in lottery[2]:
+                if ctx.message.author.id == player[0]:
+                    player[1] += amt
+                    points[find_index(player[0])] -= amt*TICKET_PRICE
+                    lottery[1] += amt*TICKET_PRICE
+                    await ctx.channel.send(f"{ctx.message.author.mention} successfully bought " + str(amt) + " tickets for " + str(amt*TICKET_PRICE) + " " + POINT_NAME + "!")
+                    return True
+            await ctx.channel.send(f"{ctx.message.author.mention} successfully bought " + str(amt) + " tickets for " + str(amt*TICKET_PRICE) + " " + POINT_NAME + "!")
+            lottery[2].append([ctx.message.author.id,amt])
+            lottery[1] += amt*TICKET_PRICE
+            points[find_index(lottery[2][len(lottery[2])-1][0])] -= amt*TICKET_PRICE
+            return False
+    except ValueError:
+        await ctx.channel.send(f"{ctx.message.author.mention}" + INVALID_ARGS)
 
 @bot.command(pass_context=True)
 async def daily(ctx):
@@ -154,7 +286,6 @@ async def daily(ctx):
         color=ctx.message.author.color
     )
     claim_time = ((timer[index] + datetime.timedelta(hours = DAILY_TIMER)) - datetime.datetime.now()).total_seconds() / 60
-    print(claim_time)
     if timer[index] == datetime.datetime(1,1,1,0,0) or claim_time <= 0:
         points[index] += int(DAILY_AMT)
         timer[index] = datetime.datetime.now()
@@ -230,7 +361,7 @@ async def duel(ctx, target=None, amt=None):
     global points
     index = find_index(ctx.message.author.id)
     if amt==None or target==None:
-        await ctx.channel.send(f"{ctx.message.author.mention}" + INSUFFICIENT_PRIV)
+        await ctx.channel.send(f"{ctx.message.author.mention}" + INVALID_ARGS)
     else:
         if amt.lower() == "all":
             amt = points[find_index(ctx.message.author.id)]
@@ -238,48 +369,45 @@ async def duel(ctx, target=None, amt=None):
             await ctx.channel.send(f"{ctx.message.author.mention}" + INSUFFICIENT_POINTS)
         elif int(amt) > 0:
             target = await bot.fetch_user(target[3:len(target)-1])
-            await ctx.channel.send(f"{target.mention}, do you accept the duel for " + amt + " " + POINT_NAME + " (y/n)?")
-            timeout = 0
-            while timeout < 10:
-                msg = await bot.wait_for('message')
-                if msg.content.lower() == 'y' and msg.author == target:
-                    if int(amt) > points[find_index(target.id)]:
-                        await ctx.channel.send(f"{target.mention}" + INSUFFICIENT_POINTS )
-                        break
+            def check(reaction, user):
+                return user == target and str(reaction.emoji) == '✅'
+            message = await ctx.channel.send(f"{target.mention}, do you accept the duel for " + amt + " " + POINT_NAME + "?")
+            await message.add_reaction("✅")
+            try:
+                reaction, user = await bot.wait_for('reaction_add', timeout=60.0, check=check)
+            except asyncio.TimeoutError:
+                await ctx.channel.send(f"{ctx.message.author.mention}, you duel request timed out.")
+            else:
+                await message.delete()
+                if int(amt) > points[find_index(target.id)]:
+                    await ctx.channel.send(f"{target.mention}" + INSUFFICIENT_POINTS )
+                else:
+                    roll_target = round(random.random()*100)
+                    roll_author = round(random.random()*100)
+                    target_index = find_index(target.id)
+                    author_index = find_index(ctx.message.author.id)
+                    embed = discord.Embed()
+                    if roll_target > roll_author:
+                        embed.title=target.name + " wins!"
+                        embed.color = target.color
+                        embed.description = target.name + " gains " + amt + " " + POINT_NAME + " and " + ctx.message.author.name + " loses " + amt + " " + POINT_NAME + "!"
+                        points[target_index] += int(amt)
+                        points[author_index] -= int(amt)
+                    elif roll_target == roll_author:
+                        embed.title= "Oh no... You both rolled the same. You both lose the bet."
+                        embed.color = bot.user.color
+                        embed.description = target.name + " loses " + amt + " " + POINT_NAME + " and " + ctx.message.author.name + " loses " + amt + " " + POINT_NAME + "!"
+                        points[target_index] -= int(amt)
+                        points[target_index] -= int(amt)
                     else:
-                        roll_target = round(random.random()*100)
-                        roll_author = round(random.random()*100)
-                        target_index = find_index(target.id)
-                        author_index = find_index(ctx.message.author.id)
-                        embed = discord.Embed()
-                        if roll_target > roll_author:
-                            embed.title=target.name + " wins!"
-                            embed.color = target.color
-                            embed.description = target.name + " gains " + amt + " " + POINT_NAME + " and " + ctx.message.author.name + " loses " + amt + " " + POINT_NAME + "!"
-                            points[target_index] += int(amt)
-                            points[author_index] -= int(amt)
-                        elif roll_target == roll_author:
-                            embed.title= "Oh no... You both rolled the same. You both lose the bet."
-                            embed.color = bot.user.color
-                            embed.description = target.name + "loses " + amt + " " + POINT_NAME + " and " + ctx.message.author.name + " loses " + amt + " " + POINT_NAME + "!"
-                            points[target_index] -= int(amt)
-                            points[target_index] -= int(amt)
-                        else:
-                            embed.title=ctx.message.author.name + " wins!"
-                            embed.color = ctx.message.author.color
-                            embed.description = ctx.message.author.name + " gains " + amt + " " + POINT_NAME + " and " + target.name + " loses " + amt + " " + POINT_NAME + "!"
-                            points[target_index] -= int(amt)
-                            points[author_index] += int(amt)
-                        embed.add_field(name=f"{ctx.message.author.name}'s Roll", value=roll_author)
-                        embed.add_field(name=f"{target.name}'s Roll", value=roll_target)
-                        await ctx.channel.send(embed=embed)
-                        break
-                elif msg.content.lower() =='n' and msg.author == target:
-                    await ctx.channel.send(f"{ctx.message.author.mention}, {target.mention} denied your duel request.")
-                    break
-                timeout += 1
-            if timeout >= 10:
-                await ctx.channel.send(f"{ctx.message.author.mention}, your duel challenge has timed out.")
+                        embed.title=ctx.message.author.name + " wins!"
+                        embed.color = ctx.message.author.color
+                        embed.description = ctx.message.author.name + " gains " + amt + " " + POINT_NAME + " and " + target.name + " loses " + amt + " " + POINT_NAME + "!"
+                        points[target_index] -= int(amt)
+                        points[author_index] += int(amt)
+                    embed.add_field(name=f"{ctx.message.author.name}'s Roll", value=roll_author)
+                    embed.add_field(name=f"{target.name}'s Roll", value=roll_target)
+                    await ctx.channel.send(embed=embed)
         else:
             await ctx.channel.send(f"{ctx.message.author.mention}" + INVALID_ARGS)
 
@@ -475,12 +603,18 @@ async def unlink(ctx):
     albion_integration[find_index(ctx.message.author.id)][1] = 0
     await ctx.channel.send(f"{ctx.message.author.mention}, unlinked Albion account with discord.")
 
+@bot.command(pass_context=True)
+async def lot(ctx):
+    """discord command to check lot"""
+    await lottery_check(ctx.channel)
+
 #ADMIN COMMANDS
 
 @bot.command(pass_context=True)
 async def reset_timer(ctx, target):
     """discord command for resetting timer"""
-    if is_admin(ctx):
+    perms = await is_admin(ctx)
+    if perms:
         target = await bot.fetch_user(target[3:len(target)-1])
         timer[find_index(target.id)] = datetime.datetime.now() - datetime.timedelta(hours = DAILY_TIMER)
         await ctx.channel.send(f"Reset {target.mention}'s daily timer.")
@@ -488,15 +622,17 @@ async def reset_timer(ctx, target):
 @bot.command(pass_context=True)
 async def force_save(ctx):
     """discord command for saving"""
-    if is_admin(ctx):
-        msg = await ctx.channel.send("Saving...")
+    perms = await is_admin(ctx)
+    if perms:
+        await ctx.channel.send("Saving...")
         await save()
-        await msg.edit("Complete!")
+        await ctx.channel.send("Complete...")
 
 @bot.command(pass_context=True)
 async def stimulus(ctx):
     """discord command for giving stimmies"""
-    if is_admin(ctx):
+    perms = await is_admin(ctx)
+    if perms:
         index = 0
         for _ in users:
             points[index] += 200
@@ -507,7 +643,8 @@ async def stimulus(ctx):
 @bot.command(pass_context=True)
 async def force_add(ctx, target, amt):
     """discord command for giving stimmies"""
-    if is_admin(ctx):
+    perms = await is_admin(ctx)
+    if perms:
         target = await bot.fetch_user(target[3:len(target)-1])
         points[find_index(target.id)] += int(amt)
         await ctx.channel.send(f"{ctx.message.author.mention} added " + amt + " " + POINT_NAME + " to " + target.name)
@@ -515,7 +652,8 @@ async def force_add(ctx, target, amt):
 @bot.command(pass_context=True)
 async def force_remove(ctx, target, amt):
     """discord command for giving stimmies"""
-    if is_admin(ctx):
+    perms = await is_admin(ctx)
+    if perms:
         target = await bot.fetch_user(target[3:len(target)-1])
         points[find_index(target.id)] -= int(amt)
         await ctx.channel.send(f"{ctx.message.author.mention} removed " + amt + " " + POINT_NAME + " from " + target.name)
@@ -523,7 +661,8 @@ async def force_remove(ctx, target, amt):
 @bot.command(pass_context=True)
 async def force_set(ctx, target, amt):
     """discord command for giving stimmies"""
-    if is_admin(ctx):
+    perms = await is_admin(ctx)
+    if perms:
         target = await bot.fetch_user(target[3:len(target)-1])
         points[find_index(target.id)] = int(amt)
         await ctx.channel.send(f"{ctx.message.author.mention} set "+ target.name + "'s to " + amt + " " + POINT_NAME)
@@ -531,7 +670,8 @@ async def force_set(ctx, target, amt):
 @bot.command(pass_context=True)
 async def force_unlink(ctx, target):
     """discord command for giving stimmies"""
-    if is_admin(ctx):
+    perms = await is_admin(ctx)
+    if perms:
         target = await bot.fetch_user(target[3:len(target)-1])
         albion_integration[find_index(target.id)][0] = 0
         albion_integration[find_index(target.id)][1] = 0
@@ -540,9 +680,26 @@ async def force_unlink(ctx, target):
 @bot.command(pass_context=True)
 async def force_fame(ctx, target, amt):
     """discord command debug"""
-    if is_admin(ctx):
+    perms = await is_admin(ctx)
+    if perms:
         target = await bot.fetch_user(target[3:len(target)-1])
         albion_integration[find_index(target.id)][1] = int(amt)
         await ctx.channel.send("Complete.")
+
+@bot.command(pass_context=True)
+async def force_end(ctx):
+    """discord command debug"""
+    perms = await is_admin(ctx)
+    if perms:
+        lottery[0] = datetime.datetime.now() - datetime.timedelta(hours=72)
+        await lot()
+
+@bot.command(pass_context=True)
+async def force_reset(ctx):
+    """discord command debug"""
+    perms = await is_admin(ctx)
+    if perms:
+        reset_lottery(STARTING_POOL)
+        await lot(ctx)
 
 bot.run(DISCORD_TOKEN)
