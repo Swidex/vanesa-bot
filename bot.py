@@ -627,7 +627,7 @@ async def force_save(ctx):
     if perms:
         await ctx.channel.send("Saving...")
         await save()
-        await ctx.channel.send("Complete...")
+        await ctx.channel.send("Complete!")
 
 @bot.command(pass_context=True)
 async def stimulus(ctx):
