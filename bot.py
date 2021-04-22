@@ -58,13 +58,17 @@ async def load():
     global inventory
     global albion_integration
     global lottery
-    users = list(await load_scores('users'))
-    points = list(await load_scores('points'))
-    timer = list(await load_scores('timer'))
-    inventory = list(await load_scores('inventory'))
-    owned_by = list(await load_scores('owned_by'))
-    albion_integration = list(await load_scores('albion_integration'))
-    lottery = list(await load_scores('lottery'))
+    try:
+        users = list(await load_scores('users'))
+        points = list(await load_scores('points'))
+        timer = list(await load_scores('timer'))
+        inventory = list(await load_scores('inventory'))
+        owned_by = list(await load_scores('owned_by'))
+        albion_integration = list(await load_scores('albion_integration'))
+        lottery = list(await load_scores('lottery'))
+    except FileNotFoundError:
+        for user in bot.get_all_members():
+            find_index(user.id)
     print("Complete!")
 
 async def continue_lot(channel):
@@ -638,7 +642,6 @@ async def stimulus(ctx):
         index = 0
         for _ in users:
             points[index] += 200
-            timer[index] = datetime.datetime.now()
             index += 1
         await ctx.channel.send("Stimulus package sent!")
 
