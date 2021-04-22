@@ -384,7 +384,7 @@ async def duel(ctx, target=None, amt=None):
                 await ctx.channel.send(f"{ctx.message.author.mention}, you duel request timed out.")
             else:
                 await message.delete()
-                if int(amt) > points[find_index(target.id)]:
+                if int(amt) > points[find_index(target.id)] or int(amt) > points[index]:
                     await ctx.channel.send(f"{target.mention}" + INSUFFICIENT_POINTS )
                 else:
                     roll_target = round(random.random()*100)
