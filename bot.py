@@ -566,6 +566,8 @@ async def leaderboard(ctx):
 @bot.command(pass_context=True)
 async def link(ctx, link=None):
     """discord command to link albion player"""
+    def check(reaction, user):
+        return user == ctx.author and str(reaction.emoji) == '✅'
     if link==None:
         await ctx.channel.send(f"{ctx.message.author.mention}" + INVALID_ARGS)
     else:
@@ -581,21 +583,16 @@ async def link(ctx, link=None):
             embed.add_field(name="Gathering Fame",value=data['LifetimeStatistics']['Gathering']['All']['Total'])
             embed.add_field(name="Crafting Fame",value=data['LifetimeStatistics']['Crafting']['Total'])
             await ctx.channel.send(embed=embed)
-            await ctx.channel.send(f"{ctx.message.author.mention}, is this you? (y/n)")
-            timeout = 0
-            while timeout < 10:
-                msg = await bot.wait_for('message')
-                if msg.content.lower() == 'y' and msg.author == ctx.message.author:
-                    albion_integration[find_index(ctx.message.author.id)][0] = int(link)
-                    albion_integration[find_index(ctx.message.author.id)][1] = int(data['KillFame'])
-                    await ctx.channel.send("Linked Albion and Discord account.")
-                    break
-                elif msg.content.lower() =='n' and msg.author == ctx.message.author:
-                    await ctx.channel.send("Canceled integration with Albion.")
-                    break
-                timeout += 1
-            if timeout >= 10:
-                await ctx.channel.send("Albion integration timed out.")
+            message = await ctx.channel.send(f"{ctx.message.author.mention}, is this you? (y/n)")
+            await message.add_reaction("✅")
+            try:
+                reaction, user = await bot.wait_for('reaction_add', timeout=60.0, check=check)
+            except asyncio.TimeoutError:
+                await ctx.channel.send(f"{ctx.message.author.mention} canceled linking process.")
+            else:
+                albion_integration[find_index(ctx.message.author.id)][0] = int(link)
+                albion_integration[find_index(ctx.message.author.id)][1] = int(data['KillFame'])
+                await ctx.channel.send("Linked Albion and Discord account.")
         except urllib.error.HTTPError:
             await ctx.channel.send("Albion user not found.")
 
@@ -695,7 +692,7 @@ async def force_end(ctx):
     perms = await is_admin(ctx)
     if perms:
         lottery[0] = datetime.datetime.now() - datetime.timedelta(hours=72)
-        await lot()
+        await lot(ctx)
 
 @bot.command(pass_context=True)
 async def force_reset(ctx):
