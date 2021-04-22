@@ -246,11 +246,9 @@ async def is_admin(ctx):
 #DISCORD COMMANDS
 
 async def check_for_reaction(ctx, message, reaction):
-    def check(reaction, user):
-        return user == ctx.author and str(reaction.emoji) == reaction
     await message.add_reaction(reaction)
     try:
-        reaction, user = await bot.wait_for('reaction_add', timeout=10.0, check=check)
+        reaction, user = await bot.wait_for('reaction_add', timeout=10.0, check=(user == ctx.author and str(reaction.emoji) == reaction))
     except asyncio.TimeoutError:
         return False
     else:
@@ -279,7 +277,8 @@ async def ticket(ctx, amt=None):
             points[ctx.message.author.id] -= amt*TICKET_PRICE
             lottery[1] += amt*TICKET_PRICE
             message = await ctx.channel.send(f"{ctx.message.author.mention} successfully bought " + str(amt) + " tickets for " + str(amt*TICKET_PRICE) + " " + POINT_NAME + "!" + "\n React with ❌ to undo!")
-            if await check_for_reaction(ctx,message,"❌"):
+            reacted = await check_for_reaction(ctx,message,"❌")
+            if reacted:
                 player[1] -= amt
                 points[ctx.message.author.id] += amt*TICKET_PRICE
                 lottery[1] -= amt*TICKET_PRICE
