@@ -140,7 +140,7 @@ async def is_admin(ctx):
     if ctx.message.author.id in admins:
         return True
     else:
-        await ctx.channel.send(INSUFFCICIENT_PRIV)
+        await ctx.channel.send(f"{ctx.message.author.mention}" + INSUFFICIENT_PRIV)
         return False
 
 #DISCORD COMMANDS
@@ -188,7 +188,7 @@ async def gamble(ctx, arg=None):
         if arg.lower() == "all":
             arg = points[find_index(ctx.message.author.id)]
         if int(arg) > points[index]:
-            await ctx.channel.send(INSUFFCICIENT_POINTS)
+            await ctx.channel.send(f"{ctx.message.author.mention}" + INSUFFICIENT_POINTS)
         elif int(arg) > 0:
             roll = round(random.random()*100)
             embed = discord.Embed(
@@ -221,7 +221,7 @@ async def gamble(ctx, arg=None):
         else:
             await ctx.channel.send(f"{ctx.message.author.mention}, you must bet more than 0 " + POINT_NAME + ".")
     except ValueError:
-        await ctx.channel.send(INVALID_ARGS)
+        await ctx.channel.send(f"{ctx.message.author.mention}" + INVALID_ARGS)
 
 @bot.command(pass_context=True)
 async def duel(ctx, target=None, amt=None):
@@ -232,9 +232,9 @@ async def duel(ctx, target=None, amt=None):
             amt = points[find_index(ctx.message.author.id)]
     index = find_index(ctx.message.author.id)
     if amt==None or target==None:
-        await ctx.channel.send(INSUFFCICIENT_PRIV)
+        await ctx.channel.send(f"{ctx.message.author.mention}" + INSUFFICIENT_PRIV)
     elif int(amt) > points[index]:
-        await ctx.channel.send(INSUFFCICIENT_POINTS)
+        await ctx.channel.send(f"{ctx.message.author.mention}" + INSUFFICIENT_POINTS)
     elif int(amt) > 0:
         target = await bot.fetch_user(target[3:len(target)-1])
         await ctx.channel.send(f"{target.mention}, do you accept the duel for " + amt + " " + POINT_NAME + " (y/n)?")
@@ -243,7 +243,7 @@ async def duel(ctx, target=None, amt=None):
             msg = await bot.wait_for('message')
             if msg.content.lower() == 'y' and msg.author == target:
                 if int(amt) > points[find_index(target.id)]:
-                    await ctx.channel.send(f"{target.mention}, you have insufficient " + POINT_NAME + " to accept the duel.")
+                    await ctx.channel.send(f"{target.mention}" + f"{ctx.message.author.mention}" + INSUFFICIENT_POINTS )
                     break
                 else:
                     roll_target = round(random.random()*100)
@@ -280,7 +280,7 @@ async def duel(ctx, target=None, amt=None):
         if timeout >= 10:
             await ctx.channel.send(f"{ctx.message.author.mention}, your duel challenge has timed out.")
     else:
-        await ctx.channel.send(INVALID_ARGS)
+        await ctx.channel.send(f"{ctx.message.author.mention}" + INVALID_ARGS)
 
 @bot.command(pass_context=True)
 async def tails(ctx, amt=None):
@@ -288,9 +288,9 @@ async def tails(ctx, amt=None):
     if amt.lower() == "all":
             amt = points[find_index(ctx.message.author.id)]
     if amt == None or int(amt) <= 0:
-        await ctx.channel.send(INVALID_ARGS)
+        await ctx.channel.send(f"{ctx.message.author.mention}" + INVALID_ARGS)
     elif int(amt) > points[find_index(ctx.message.author.id)]:
-        await ctx.channel.send(INSUFFCICIENT_POINTS)
+        await ctx.channel.send(f"{ctx.message.author.mention}" + INSUFFICIENT_POINTS)
     else:
         await heads_or_tails(ctx,1,amt)
 
@@ -300,9 +300,9 @@ async def heads(ctx, amt=None):
     if amt.lower() == "all":
             amt = points[find_index(ctx.message.author.id)]
     if amt == None or int(amt) <= 0:
-        await ctx.channel.send(INVALID_ARGS)
+        await ctx.channel.send(f"{ctx.message.author.mention}" + INVALID_ARGS)
     elif int(amt) > points[find_index(ctx.message.author.id)]:
-        await ctx.channel.send(INSUFFCICIENT_POINTS)
+        await ctx.channel.send(f"{ctx.message.author.mention}" + INSUFFICIENT_POINTS)
     else:
         await heads_or_tails(ctx,0,amt)
 
@@ -313,14 +313,14 @@ async def give(ctx, target, amt):
     global points
     index = find_index(ctx.message.author.id)
     if int(amt) > points[index]:
-        await ctx.channel.send(INSUFFCICIENT_POINTS)
+        await ctx.channel.send(f"{ctx.message.author.mention}" + INSUFFICIENT_POINTS)
     elif int(amt) > 0:
         target = await bot.fetch_user(target[3:len(target)-1])
         points[find_index(target.id)] += int(amt)
         points[find_index(ctx.message.author.id)] -= int(amt)
         await ctx.channel.send(f"{ctx.message.author.mention} gave " + amt + " " + POINT_NAME + " to " + target.name)
     else:
-        await ctx.channel.send(INVALID_ARGS)
+        await ctx.channel.send(f"{ctx.message.author.mention}" + INVALID_ARGS)
 
 @bot.command(pass_context=True)
 async def profile(ctx, target=None):
@@ -368,9 +368,9 @@ async def buy(ctx, target=None, bid=None):
     global owned_by
     global points
     if target == None or bid==None:
-        await ctx.channel.send(INVALID_ARGS)
+        await ctx.channel.send(f"{ctx.message.author.mention}" + INVALID_ARGS)
     elif int(bid) > points[find_index(ctx.message.author.id)]:
-        await ctx.channel.send(INSUFFCICIENT_POINTS)
+        await ctx.channel.send(f"{ctx.message.author.mention}" + INSUFFICIENT_POINTS)
     else:
         user = await bot.fetch_user(target[3:len(target)-1])
         if owned_by[find_index(user.id)][0] == ctx.message.author.id:
@@ -393,7 +393,7 @@ async def buy(ctx, target=None, bid=None):
 async def sell(ctx, target=None):
     """discord command to sell user"""
     if target == None:
-        await ctx.channel.send(INVALID_ARGS)
+        await ctx.channel.send(f"{ctx.message.author.mention}" + INVALID_ARGS)
     else:
         user = await bot.fetch_user(target[3:len(target)-1])
         if user.id == ctx.message.author.id:
@@ -435,7 +435,7 @@ async def leaderboard(ctx):
 async def link(ctx, link=None):
     """discord command to link albion player"""
     if link==None:
-        await ctx.channel.send(INVALID_ARGS)
+        await ctx.channel.send(f"{ctx.message.author.mention}" + INVALID_ARGS)
     else:
         try:
             data = await get_albion_data(link)
