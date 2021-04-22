@@ -171,7 +171,7 @@ def new_user(target):
     owned_by.append([int(target),200])
     albion_integration.append([0,0])
 
-async def await remove_from_inventory(target):
+async def remove_from_inventory(target):
     """func to go through every inventory and remove target from them"""
     for players in inventory:
         try:
