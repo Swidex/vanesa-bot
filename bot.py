@@ -160,7 +160,7 @@ async def daily(ctx):
         extra_points = math.floor(int(fame_diff)/20000)
         if int(extra_points) > 0:
             embed.description += "\nFrom this, you will gain " + str(int(extra_points*200)) + " " + POINT_NAME + "!"
-            albion_integration[index][1] += extra_points*20000
+            albion_integration[index][1] += int(extra_points)*20000
             points[index] += int(extra_points*200)
         else:
             embed.description += "\nYou do not meet the threshold to gain more " + POINT_NAME + "."
