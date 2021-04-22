@@ -245,15 +245,6 @@ async def is_admin(ctx):
 
 #DISCORD COMMANDS
 
-async def check_for_reaction(ctx, message, reaction):
-    await message.add_reaction(reaction)
-    try:
-        reaction, user = await bot.wait_for('reaction_add', timeout=10.0, check=(user == ctx.author and str(reaction.emoji) == reaction))
-    except asyncio.TimeoutError:
-        return False
-    else:
-        return True
-
 @bot.command(pass_context=True)
 async def ticket(ctx, amt=None):
     """buy amt of tickets"""
@@ -275,10 +266,14 @@ async def ticket(ctx, amt=None):
             points[find_index(ctx.message.author.id)] -= amt*TICKET_PRICE
             lottery[1] += amt*TICKET_PRICE
             message = await ctx.channel.send(f"{ctx.message.author.mention} successfully bought " + str(amt) + " tickets for " + str(amt*TICKET_PRICE) + " " + POINT_NAME + "!" + "\n React with ❌ to undo!")
-            reacted = await check_for_reaction(ctx,message,"❌")
-            if reacted:
+            await message.add_reaction("❌")
+            try:
+                reaction, user = await bot.wait_for('reaction_add', timeout=10.0, check=(user == ctx.author and str(reaction.emoji) == "❌"))
+            except asyncio.TimeoutError:
+                await message.remove_reaction("❌")
+            else:
                 player[1] -= amt
-                points[ctx.message.author.id] += amt*TICKET_PRICE
+                points[find_index(ctx.message.author.id)] += amt*TICKET_PRICE
                 lottery[1] -= amt*TICKET_PRICE
                 await message.delete()
                 await ctx.channel.send(f"{ctx.message.author.mention}, canceled ticket purchase.")
