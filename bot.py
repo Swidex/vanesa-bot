@@ -264,10 +264,10 @@ async def ticket(ctx, amt=None):
         except asyncio.TimeoutError:
             await ctx.channel.send(f"{ctx.message.author.mention} canceled ticket purchase.")
         else:
+            await message.delete()
             if amt*TICKET_PRICE > points[find_index(ctx.message.author.id)]:
                 await ctx.channel.send(f"{ctx.message.author.mention}" + INSUFFICIENT_POINTS)
                 return False
-            await message.delete()
             for player in lottery[2]:
                 if ctx.message.author.id == player[0]:
                     player[1] += amt
