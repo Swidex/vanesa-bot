@@ -249,7 +249,7 @@ async def is_admin(ctx):
 async def ticket(ctx, amt=None):
     """buy amt of tickets"""
     def check(reaction, user):
-        return user == ctx.author and str(reaction.emoji) == reaction
+        return user == ctx.author and str(reaction.emoji) == '❌'
     if amt==None:
         amt = 1
     try:
