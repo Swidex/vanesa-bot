@@ -273,9 +273,8 @@ async def ticket(ctx, amt=None):
             except asyncio.TimeoutError:
                 await message.remove_reaction("❌")
             else:
-                player[1] -= amt
-                points[find_index(ctx.message.author.id)] += amt*TICKET_PRICE
-                lottery[1] -= amt*TICKET_PRICE
+                lottery[2].delete(index)
+                lottery[1] += amt*TICKET_PRICE
                 await message.delete()
                 await ctx.channel.send(f"{ctx.message.author.mention}, canceled ticket purchase.")
     except ValueError:
