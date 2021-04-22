@@ -191,7 +191,7 @@ async def gamble(ctx, arg=None):
                     amt = int(arg) / 2
                 else:
                     amt = int(arg)
-                points[index] -= int(arg)
+                points[index] -= int(amt)
             elif roll < 75:
                 amt = int(float(arg) * 2) - float(arg)
                 points[index] += amt
