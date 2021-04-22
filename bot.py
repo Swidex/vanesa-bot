@@ -132,7 +132,7 @@ def reset_lottery(amt):
 async def lottery_check(channel=None):
     """every 72 hours, play out lottery"""
     if channel == None:
-        channel = bot.get_channel(810644788344258592)
+        channel = bot.get_channel(DEFAULT_CHANNEL)
     time_after_reset = (datetime.datetime.now() - lottery[0]).total_seconds()
     if time_after_reset >= 259200:
         if len(lottery[2]) >= 1:
