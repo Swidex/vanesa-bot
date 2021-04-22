@@ -5,6 +5,7 @@ from discord.ext import tasks, commands
 import numpy as np
 from file_mgr import *
 from discord import utils
+from constants import *
 
 gcontext = ssl.SSLContext()
 load_dotenv()
@@ -18,17 +19,6 @@ timer = []
 inventory = []
 owned_by = []
 albion_integration = []
-POINT_NAME = ":peach:"
-DAILY_TIMER = 12
-DAILY_AMT = 200
-HEADERS = {
-        'User-Agent':'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.0.7) Gecko/2009021910 Firefox/3.0.7',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Charset': 'ISO-8859-1,utf-8;q=0.7,*;q=0.3',
-        'Accept-Encoding': 'none',
-        'Accept-Language': 'en-US,en;q=0.8',
-        'Connection': 'keep-alive'
-    }
 
 @tasks.loop(minutes=30)
 async def save():
@@ -80,6 +70,18 @@ def new_user(target):
     inventory.append([int(target)])
     owned_by.append([int(target),200])
     albion_integration.append([0,0])
+
+async def remove_from_inventory(target):
+    """func to go through every inventory and remove target from them"""
+    for players in inventory:
+        try:
+            players = players.tolist()
+        except AttributeError:
+            pass
+        try:
+            players.remove(target.id)
+        except ValueError:
+            pass
 
 def find_index(target):
     """func to find index of given target"""
@@ -133,6 +135,16 @@ async def reward_points(index):
     diff = int(curr_fame['KillFame']) - int(albion_integration[index][1])
     return int(diff)
 
+async def is_admin(ctx):
+    """return whether author is admin"""
+    if ctx.message.author.id in admins:
+        return True
+    else:
+        await ctx.channel.send(INSUFFCICIENT_PRIV)
+        return False
+
+#DISCORD COMMANDS
+
 @bot.command(pass_context=True)
 async def daily(ctx):
     """discord command to claim daily income"""
@@ -176,7 +188,7 @@ async def gamble(ctx, arg=None):
         if arg.lower() == "all":
             arg = points[find_index(ctx.message.author.id)]
         if int(arg) > points[index]:
-            await ctx.channel.send(f"{ctx.message.author.mention}, you have insufficient " + POINT_NAME + " for this gamble.")
+            await ctx.channel.send(INSUFFCICIENT_POINTS)
         elif int(arg) > 0:
             roll = round(random.random()*100)
             embed = discord.Embed(
@@ -209,7 +221,7 @@ async def gamble(ctx, arg=None):
         else:
             await ctx.channel.send(f"{ctx.message.author.mention}, you must bet more than 0 " + POINT_NAME + ".")
     except ValueError:
-        await ctx.channel.send("Invalid argument, please provide a valid amount.")
+        await ctx.channel.send(INVALID_ARGS)
 
 @bot.command(pass_context=True)
 async def duel(ctx, target=None, amt=None):
@@ -220,9 +232,9 @@ async def duel(ctx, target=None, amt=None):
             amt = points[find_index(ctx.message.author.id)]
     index = find_index(ctx.message.author.id)
     if amt==None or target==None:
-        await ctx.channel.send(f"{ctx.message.author.mention}, please provide more arguments.")
+        await ctx.channel.send(INSUFFCICIENT_PRIV)
     elif int(amt) > points[index]:
-        await ctx.channel.send(f"{ctx.message.author.mention}, you have insufficient " + POINT_NAME + " to duel.")
+        await ctx.channel.send(INSUFFCICIENT_POINTS)
     elif int(amt) > 0:
         target = await bot.fetch_user(target[3:len(target)-1])
         await ctx.channel.send(f"{target.mention}, do you accept the duel for " + amt + " " + POINT_NAME + " (y/n)?")
@@ -268,7 +280,7 @@ async def duel(ctx, target=None, amt=None):
         if timeout >= 10:
             await ctx.channel.send(f"{ctx.message.author.mention}, your duel challenge has timed out.")
     else:
-        await ctx.channel.send(f"{ctx.message.author.mention}, you must bet more than 0 " + POINT_NAME + " to duel.")
+        await ctx.channel.send(INVALID_ARGS)
 
 @bot.command(pass_context=True)
 async def tails(ctx, amt=None):
@@ -276,9 +288,9 @@ async def tails(ctx, amt=None):
     if amt.lower() == "all":
             amt = points[find_index(ctx.message.author.id)]
     if amt == None or int(amt) <= 0:
-        await ctx.channel.send(f"{ctx.message.author.mention}, please bet a valid amount.")
+        await ctx.channel.send(INVALID_ARGS)
     elif int(amt) > points[find_index(ctx.message.author.id)]:
-        await ctx.channel.send(f"{ctx.message.author.mention}, you have insufficient " + POINT_NAME + " for this game.")
+        await ctx.channel.send(INSUFFCICIENT_POINTS)
     else:
         await heads_or_tails(ctx,1,amt)
 
@@ -288,50 +300,11 @@ async def heads(ctx, amt=None):
     if amt.lower() == "all":
             amt = points[find_index(ctx.message.author.id)]
     if amt == None or int(amt) <= 0:
-        await ctx.channel.send(f"{ctx.message.author.mention}, please bet a valid amount.")
+        await ctx.channel.send(INVALID_ARGS)
     elif int(amt) > points[find_index(ctx.message.author.id)]:
-        await ctx.channel.send(f"{ctx.message.author.mention}, you have insufficient " + POINT_NAME + " for this game.")
+        await ctx.channel.send(INSUFFCICIENT_POINTS)
     else:
         await heads_or_tails(ctx,0,amt)
-
-@bot.command(pass_context=True)
-async def manual_save(ctx):
-    """discord command for saving"""
-    if ctx.message.author.name == 'Swidex':
-        await save()
-
-@bot.command(pass_context=True)
-async def stimulus(ctx):
-    """discord command for giving stimmies"""
-    if str(ctx.message.author) == 'Swidex#2907':
-        index = 0
-        for _ in users:
-            points[index] += 200
-            timer[index] = datetime.datetime.now()
-            index += 1
-        await ctx.channel.send("Stimulus package sent!")
-    else:
-        await ctx.channel.send("You have insufficient priveleges for this command.")
-
-@bot.command(pass_context=True)
-async def admin_give(ctx, target, amt):
-    """discord command for giving stimmies"""
-    if str(ctx.message.author) == 'Swidex#2907':
-        target = await bot.fetch_user(target[3:len(target)-1])
-        points[find_index(target.id)] += int(amt)
-        await ctx.channel.send(f"{ctx.message.author.mention} gave " + amt + " " + POINT_NAME + " to " + target.name)
-    else:
-        await ctx.channel.send("You have insufficient priveleges for this command.")
-
-@bot.command(pass_context=True)
-async def set_fame(ctx, target, amt):
-    """discord command debug"""
-    if str(ctx.message.author) == 'Swidex#2907':
-        target = await bot.fetch_user(target[3:len(target)-1])
-        albion_integration[find_index(target.id)][1] = int(amt)
-        await ctx.channel.send("Complete.")
-    else:
-        await ctx.channel.send("You have insufficient priveleges for this command.")
 
 @bot.command(pass_context=True)
 async def give(ctx, target, amt):
@@ -340,14 +313,14 @@ async def give(ctx, target, amt):
     global points
     index = find_index(ctx.message.author.id)
     if int(amt) > points[index]:
-        await ctx.channel.send(f"{ctx.message.author.mention}, you have insufficient " + POINT_NAME + " to give.")
+        await ctx.channel.send(INSUFFCICIENT_POINTS)
     elif int(amt) > 0:
         target = await bot.fetch_user(target[3:len(target)-1])
         points[find_index(target.id)] += int(amt)
         points[find_index(ctx.message.author.id)] -= int(amt)
         await ctx.channel.send(f"{ctx.message.author.mention} gave " + amt + " " + POINT_NAME + " to " + target.name)
     else:
-        await ctx.channel.send(f"{ctx.message.author.mention}, you must give more than 0 " + POINT_NAME + ".")
+        await ctx.channel.send(INVALID_ARGS)
 
 @bot.command(pass_context=True)
 async def profile(ctx, target=None):
@@ -395,23 +368,15 @@ async def buy(ctx, target=None, bid=None):
     global owned_by
     global points
     if target == None or bid==None:
-        await ctx.channel.send(f"{ctx.message.author.mention}, please provide more arguments for the command (i.e !buy <person> <bid>)")
+        await ctx.channel.send(INVALID_ARGS)
     elif int(bid) > points[find_index(ctx.message.author.id)]:
-        await ctx.channel.send(f"{ctx.message.author.mention}, you have insufficient " + POINT_NAME + " to make the bid.")
+        await ctx.channel.send(INSUFFCICIENT_POINTS)
     else:
         user = await bot.fetch_user(target[3:len(target)-1])
         if owned_by[find_index(user.id)][0] == ctx.message.author.id:
             await ctx.channel.send(f"{ctx.message.author.mention}, you already own this user!")
         elif int(bid) > int(owned_by[find_index(user.id)][1]):
-            for players in inventory:
-                try:
-                    players = players.tolist()
-                except AttributeError:
-                    pass
-                try:
-                    players.remove(user.id)
-                except ValueError:
-                    pass
+            remove_from_inventory(user)
             try:
                 inventory[find_index(ctx.message.author.id)] = inventory[find_index(ctx.message.author.id)].tolist()
             except AttributeError:
@@ -428,21 +393,13 @@ async def buy(ctx, target=None, bid=None):
 async def sell(ctx, target=None):
     """discord command to sell user"""
     if target == None:
-        await ctx.channel.send(f"{ctx.message.author.mention}, please provide more arguments for the command (i.e !buy <person> <bid>)")
+        await ctx.channel.send(INVALID_ARGS)
     else:
         user = await bot.fetch_user(target[3:len(target)-1])
         if user.id == ctx.message.author.id:
             await ctx.channel.send(f"{ctx.message.author.mention}, you cannot sell yourself!")
         else:
-            for players in inventory:
-                try:
-                    players = players.tolist()
-                except AttributeError:
-                    pass
-                try:
-                    players.remove(user.id)
-                except ValueError:
-                    pass
+            remove_from_inventory(user)
             try:
                 inventory[find_index(user.id)] = inventory[find_index(user.id)].tolist()
             except AttributeError:
@@ -478,7 +435,7 @@ async def leaderboard(ctx):
 async def link(ctx, link=None):
     """discord command to link albion player"""
     if link==None:
-        await ctx.channel.send(f"{ctx.message.author.mention}, please provide sufficient arguments.")
+        await ctx.channel.send(INVALID_ARGS)
     else:
         try:
             data = await get_albion_data(link)
@@ -517,14 +474,74 @@ async def unlink(ctx):
     albion_integration[find_index(ctx.message.author.id)][1] = 0
     await ctx.channel.send(f"{ctx.message.author.mention}, unlinked Albion account with discord.")
 
+#ADMIN COMMANDS
+
 @bot.command(pass_context=True)
-async def reset_time(ctx, target):
+async def reset_timer(ctx, target):
     """discord command for resetting timer"""
-    if str(ctx.message.author) == 'Swidex#2907':
+    if is_admin(ctx):
         target = await bot.fetch_user(target[3:len(target)-1])
         timer[find_index(target.id)] = datetime.datetime.now() - datetime.timedelta(hours = DAILY_TIMER)
         await ctx.channel.send(f"Reset {target.mention}'s daily timer.")
-    else:
-        await ctx.channel.send("You have insufficient priveleges for this command.")
+
+@bot.command(pass_context=True)
+async def force_save(ctx):
+    """discord command for saving"""
+    if is_admin(ctx):
+        msg = await ctx.channel.send("Saving...")
+        await save()
+        await msg.edit("Complete!")
+
+@bot.command(pass_context=True)
+async def stimulus(ctx):
+    """discord command for giving stimmies"""
+    if is_admin(ctx):
+        index = 0
+        for _ in users:
+            points[index] += 200
+            timer[index] = datetime.datetime.now()
+            index += 1
+        await ctx.channel.send("Stimulus package sent!")
+
+@bot.command(pass_context=True)
+async def force_add(ctx, target, amt):
+    """discord command for giving stimmies"""
+    if is_admin(ctx):
+        target = await bot.fetch_user(target[3:len(target)-1])
+        points[find_index(target.id)] += int(amt)
+        await ctx.channel.send(f"{ctx.message.author.mention} added " + amt + " " + POINT_NAME + " to " + target.name)
+
+@bot.command(pass_context=True)
+async def force_remove(ctx, target, amt):
+    """discord command for giving stimmies"""
+    if is_admin(ctx):
+        target = await bot.fetch_user(target[3:len(target)-1])
+        points[find_index(target.id)] -= int(amt)
+        await ctx.channel.send(f"{ctx.message.author.mention} removed " + amt + " " + POINT_NAME + " from " + target.name)
+
+@bot.command(pass_context=True)
+async def force_set(ctx, target, amt):
+    """discord command for giving stimmies"""
+    if is_admin(ctx):
+        target = await bot.fetch_user(target[3:len(target)-1])
+        points[find_index(target.id)] = int(amt)
+        await ctx.channel.send(f"{ctx.message.author.mention} set "+ target.name + "'s to " + amt + " " + POINT_NAME)
+
+@bot.command(pass_context=True)
+async def force_unlink(ctx, target):
+    """discord command for giving stimmies"""
+    if is_admin(ctx):
+        target = await bot.fetch_user(target[3:len(target)-1])
+        albion_integration[find_index(target.id)][0] = 0
+        albion_integration[find_index(target.id)][1] = 0
+        await ctx.channel.send(f"{ctx.message.author.mention} unlinked "+ target.name + "'s Albion account")
+
+@bot.command(pass_context=True)
+async def force_fame(ctx, target, amt):
+    """discord command debug"""
+    if is_admin(ctx):
+        target = await bot.fetch_user(target[3:len(target)-1])
+        albion_integration[find_index(target.id)][1] = int(amt)
+        await ctx.channel.send("Complete.")
 
 bot.run(DISCORD_TOKEN)
