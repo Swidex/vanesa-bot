@@ -220,7 +220,7 @@ async def gamble(ctx, arg=None):
             await ctx.channel.send(embed=embed)
         else:
             await ctx.channel.send(f"{ctx.message.author.mention}, you must bet more than 0 " + POINT_NAME + ".")
-    except ValueError:
+    except (AttributeError, ValueError):
         await ctx.channel.send(f"{ctx.message.author.mention}" + INVALID_ARGS)
 
 @bot.command(pass_context=True)
@@ -228,59 +228,60 @@ async def duel(ctx, target=None, amt=None):
     """discord command for dueling players"""
     global users
     global points
-    if amt.lower() == "all":
-            amt = points[find_index(ctx.message.author.id)]
     index = find_index(ctx.message.author.id)
     if amt==None or target==None:
         await ctx.channel.send(f"{ctx.message.author.mention}" + INSUFFICIENT_PRIV)
-    elif int(amt) > points[index]:
-        await ctx.channel.send(f"{ctx.message.author.mention}" + INSUFFICIENT_POINTS)
-    elif int(amt) > 0:
-        target = await bot.fetch_user(target[3:len(target)-1])
-        await ctx.channel.send(f"{target.mention}, do you accept the duel for " + amt + " " + POINT_NAME + " (y/n)?")
-        timeout = 0
-        while timeout < 10:
-            msg = await bot.wait_for('message')
-            if msg.content.lower() == 'y' and msg.author == target:
-                if int(amt) > points[find_index(target.id)]:
-                    await ctx.channel.send(f"{target.mention}" + f"{ctx.message.author.mention}" + INSUFFICIENT_POINTS )
-                    break
-                else:
-                    roll_target = round(random.random()*100)
-                    roll_author = round(random.random()*100)
-                    target_index = find_index(target.id)
-                    author_index = find_index(ctx.message.author.id)
-                    embed = discord.Embed()
-                    if roll_target > roll_author:
-                        embed.title=target.name + " wins!"
-                        embed.color = target.color
-                        embed.description = target.name + " gains " + amt + " " + POINT_NAME + " and " + ctx.message.author.name + " loses " + amt + " " + POINT_NAME + "!"
-                        points[target_index] += int(amt)
-                        points[author_index] -= int(amt)
-                    elif roll_target == roll_author:
-                        embed.title= "Oh no... You both rolled the same. You both lose the bet."
-                        embed.color = bot.user.color
-                        embed.description = target.name + "loses " + amt + " " + POINT_NAME + " and " + ctx.message.author.name + " loses " + amt + " " + POINT_NAME + "!"
-                        points[target_index] -= int(amt)
-                        points[target_index] -= int(amt)
-                    else:
-                        embed.title=ctx.message.author.name + " wins!"
-                        embed.color = ctx.message.author.color
-                        embed.description = ctx.message.author.name + " gains " + amt + " " + POINT_NAME + " and " + target.name + " loses " + amt + " " + POINT_NAME + "!"
-                        points[target_index] -= int(amt)
-                        points[author_index] += int(amt)
-                    embed.add_field(name=f"{ctx.message.author.name}'s Roll", value=roll_author)
-                    embed.add_field(name=f"{target.name}'s Roll", value=roll_target)
-                    await ctx.channel.send(embed=embed)
-                    break
-            elif msg.content.lower() =='n' and msg.author == target:
-                await ctx.channel.send(f"{ctx.message.author.mention}, {target.mention} denied your duel request.")
-                break
-            timeout += 1
-        if timeout >= 10:
-            await ctx.channel.send(f"{ctx.message.author.mention}, your duel challenge has timed out.")
     else:
-        await ctx.channel.send(f"{ctx.message.author.mention}" + INVALID_ARGS)
+        if amt.lower() == "all":
+            amt = points[find_index(ctx.message.author.id)]
+        if int(amt) > points[index]:
+            await ctx.channel.send(f"{ctx.message.author.mention}" + INSUFFICIENT_POINTS)
+        elif int(amt) > 0:
+            target = await bot.fetch_user(target[3:len(target)-1])
+            await ctx.channel.send(f"{target.mention}, do you accept the duel for " + amt + " " + POINT_NAME + " (y/n)?")
+            timeout = 0
+            while timeout < 10:
+                msg = await bot.wait_for('message')
+                if msg.content.lower() == 'y' and msg.author == target:
+                    if int(amt) > points[find_index(target.id)]:
+                        await ctx.channel.send(f"{target.mention}" + INSUFFICIENT_POINTS )
+                        break
+                    else:
+                        roll_target = round(random.random()*100)
+                        roll_author = round(random.random()*100)
+                        target_index = find_index(target.id)
+                        author_index = find_index(ctx.message.author.id)
+                        embed = discord.Embed()
+                        if roll_target > roll_author:
+                            embed.title=target.name + " wins!"
+                            embed.color = target.color
+                            embed.description = target.name + " gains " + amt + " " + POINT_NAME + " and " + ctx.message.author.name + " loses " + amt + " " + POINT_NAME + "!"
+                            points[target_index] += int(amt)
+                            points[author_index] -= int(amt)
+                        elif roll_target == roll_author:
+                            embed.title= "Oh no... You both rolled the same. You both lose the bet."
+                            embed.color = bot.user.color
+                            embed.description = target.name + "loses " + amt + " " + POINT_NAME + " and " + ctx.message.author.name + " loses " + amt + " " + POINT_NAME + "!"
+                            points[target_index] -= int(amt)
+                            points[target_index] -= int(amt)
+                        else:
+                            embed.title=ctx.message.author.name + " wins!"
+                            embed.color = ctx.message.author.color
+                            embed.description = ctx.message.author.name + " gains " + amt + " " + POINT_NAME + " and " + target.name + " loses " + amt + " " + POINT_NAME + "!"
+                            points[target_index] -= int(amt)
+                            points[author_index] += int(amt)
+                        embed.add_field(name=f"{ctx.message.author.name}'s Roll", value=roll_author)
+                        embed.add_field(name=f"{target.name}'s Roll", value=roll_target)
+                        await ctx.channel.send(embed=embed)
+                        break
+                elif msg.content.lower() =='n' and msg.author == target:
+                    await ctx.channel.send(f"{ctx.message.author.mention}, {target.mention} denied your duel request.")
+                    break
+                timeout += 1
+            if timeout >= 10:
+                await ctx.channel.send(f"{ctx.message.author.mention}, your duel challenge has timed out.")
+        else:
+            await ctx.channel.send(f"{ctx.message.author.mention}" + INVALID_ARGS)
 
 @bot.command(pass_context=True)
 async def tails(ctx, amt=None):
