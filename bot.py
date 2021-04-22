@@ -257,16 +257,14 @@ async def check_for_reaction(ctx, message, reaction):
 @bot.command(pass_context=True)
 async def ticket(ctx, amt=None):
     """buy amt of tickets"""
+    print(str(amt))
     if amt==None:
         amt = 1
     try:
         amt = int(amt)
         if amt*TICKET_PRICE > points[find_index(ctx.message.author.id)]:
             await ctx.channel.send(f"{ctx.message.author.mention}" + INSUFFICIENT_POINTS)
-            return False
-            if amt*TICKET_PRICE > points[find_index(ctx.message.author.id)]:
-                await ctx.channel.send(f"{ctx.message.author.mention}" + INSUFFICIENT_POINTS)
-                return False
+        else:
             if ctx.message.author.id not in lottery[2]:
                 lottery[2].append([ctx.message.author.id,0])
             counter = 0
