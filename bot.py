@@ -248,7 +248,8 @@ async def is_admin(ctx):
 @bot.command(pass_context=True)
 async def ticket(ctx, amt=None):
     """buy amt of tickets"""
-    print(str(amt))
+    def check(reaction, user):
+        return user == ctx.author and str(reaction.emoji) == "❌"
     if amt==None:
         amt = 1
     try:
@@ -268,7 +269,7 @@ async def ticket(ctx, amt=None):
             message = await ctx.channel.send(f"{ctx.message.author.mention} successfully bought " + str(amt) + " tickets for " + str(amt*TICKET_PRICE) + " " + POINT_NAME + "!" + "\n React with ❌ to undo!")
             await message.add_reaction("❌")
             try:
-                reaction, user = await bot.wait_for('reaction_add', timeout=10.0, check=(user == ctx.author and str(reaction.emoji) == "❌"))
+                reaction, user = await bot.wait_for('reaction_add', timeout=10.0, check=check)
             except asyncio.TimeoutError:
                 await message.remove_reaction("❌")
             else:
