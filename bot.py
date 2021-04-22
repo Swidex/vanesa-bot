@@ -183,23 +183,20 @@ async def gamble(ctx, arg=None):
                 title=f"{ctx.message.author.name} rolled a " + str(roll) + "!",
                 color=ctx.message.author.color
             )
-            if roll >= 50:
+            if roll >= 66:
                 embed.description = f"{ctx.message.author.name} earned an additional "
-            if roll < 50:
+            if roll < 66:
                 embed.description = f"{ctx.message.author.name} lost "
                 amt = int(arg)
                 points[index] -= int(arg)
-            elif roll < 66:
+            elif roll < 75:
                 amt = int(float(arg) * 1.5) - float(arg)
                 points[index] += amt
-            elif roll < 75:
+            elif roll < 90:
                 amt = int(float(arg) * 2) - float(arg)
                 points[index] += amt
-            elif roll < 90:
-                amt = int(float(arg) * 2.33) - float(arg)
-                points[index] += amt
             elif roll < 100:
-                amt = int(float(arg) * 2.66) - float(arg)
+                amt = int(float(arg) * 2.5) - float(arg)
                 points[index] += amt
             elif roll == 100:
                 amt = int(float(arg) * 3.0) - float(arg)
