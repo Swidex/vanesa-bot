@@ -277,8 +277,7 @@ async def ticket(ctx, amt=None):
         points[find_index(ctx.message.author.id)] -= amt*TICKET_PRICE
         lottery[1] += amt*TICKET_PRICE
         message = await ctx.channel.send(f"{ctx.message.author.mention} successfully bought " + str(amt) + " tickets for " + str(amt*TICKET_PRICE) + " " + POINT_NAME + "!" + "\n React with ❌ to undo!")
-        reacted = await check_reaction(ctx, message, 60.0, "❌")
-        if reacted:
+        if await check_reaction(ctx, message, 60.0, "❌"):
             lottery[2][index][1] -= amt
             points[find_index(ctx.message.author.id)] += amt*TICKET_PRICE
             lottery[1] -= amt*TICKET_PRICE
