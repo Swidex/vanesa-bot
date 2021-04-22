@@ -269,7 +269,7 @@ async def ticket(ctx, amt=None):
         message = await ctx.channel.send(f"{ctx.message.author.mention} successfully bought " + str(amt) + " tickets for " + str(amt*TICKET_PRICE) + " " + POINT_NAME + "!" + "\n React with ❌ to undo!")
         await message.add_reaction('❌')
         try:
-            reaction, user = await bot.wait_for('reaction_add', timeout=60.0, check=())
+            reaction, user = await bot.wait_for('reaction_add', timeout=60.0, check=check)
         except asyncio.TimeoutError:
             await message.remove_reaction('❌')
         else:
