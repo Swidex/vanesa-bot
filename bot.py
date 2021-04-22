@@ -67,6 +67,7 @@ async def load():
         albion_integration = list(await load_scores('albion_integration'))
         lottery = list(await load_scores('lottery'))
     except FileNotFoundError:
+        reset_lottery(STARTING_POOL)
         for user in bot.get_all_members():
             find_index(user.id)
     print("Complete!")
