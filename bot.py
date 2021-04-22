@@ -169,7 +169,7 @@ def new_user(target):
     timer.append(datetime.datetime(1,1,1,0,0))
     inventory.append([int(target)])
     owned_by.append([int(target),200])
-    albion_integration.append([0,0])
+    albion_integration.append(["",0])
 
 def remove_from_inventory(target):
     """func to go through every inventory and remove target from them"""
