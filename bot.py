@@ -278,6 +278,8 @@ async def ticket(ctx, amt=None):
                 lottery[1] -= amt*TICKET_PRICE
                 await message.delete()
                 await ctx.channel.send(f"{ctx.message.author.mention}, canceled ticket purchase.")
+            if lottery[2][index][1] == 0:
+                lottery[2].pop(index)
     except ValueError:
         await ctx.channel.send(f"{ctx.message.author.mention}" + INVALID_ARGS)
 
