@@ -171,7 +171,7 @@ def new_user(target):
     owned_by.append([int(target),200])
     albion_integration.append([0,0])
 
-async def remove_from_inventory(target):
+async def await remove_from_inventory(target):
     """func to go through every inventory and remove target from them"""
     for players in inventory:
         try:
@@ -509,7 +509,7 @@ async def buy(ctx, target=None, bid=None):
         if owned_by[find_index(user.id)][0] == ctx.message.author.id:
             await ctx.channel.send(f"{ctx.message.author.mention}, you already own this user!")
         elif int(bid) > int(owned_by[find_index(user.id)][1]):
-            remove_from_inventory(user)
+            await remove_from_inventory(user)
             try:
                 inventory[find_index(ctx.message.author.id)] = inventory[find_index(ctx.message.author.id)].tolist()
             except AttributeError:
@@ -532,7 +532,7 @@ async def sell(ctx, target=None):
         if user.id == ctx.message.author.id:
             await ctx.channel.send(f"{ctx.message.author.mention}, you cannot sell yourself!")
         else:
-            remove_from_inventory(user)
+            await remove_from_inventory(user)
             try:
                 inventory[find_index(user.id)] = inventory[find_index(user.id)].tolist()
             except AttributeError:
