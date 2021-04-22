@@ -260,10 +260,13 @@ async def ticket(ctx, amt=None):
         message = await ctx.channel.send(f"{ctx.message.author.mention}, are you sure you want to buy " + str(amt) + " tickets for " + str(amt*TICKET_PRICE) + " " + POINT_NAME + "?")
         await message.add_reaction("✅")
         try:
-            reaction, user = await bot.wait_for('reaction_add', timeout=60.0, check=check)
+            reaction, user = await bot.wait_for('reaction_add', timeout=10.0, check=check)
         except asyncio.TimeoutError:
             await ctx.channel.send(f"{ctx.message.author.mention} canceled ticket purchase.")
         else:
+            if amt*TICKET_PRICE > points[find_index(ctx.message.author.id)]:
+                await ctx.channel.send(f"{ctx.message.author.mention}" + INSUFFICIENT_POINTS)
+                return False
             await message.delete()
             for player in lottery[2]:
                 if ctx.message.author.id == player[0]:
