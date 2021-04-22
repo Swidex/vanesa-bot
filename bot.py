@@ -72,6 +72,7 @@ async def continue_lot(channel):
     reset_lottery(lottery[1])
     embed = discord.Embed(
         title="Lottery",
+        color=bot.user.color,
         description="The lottery pool has concluded!\nThere were no winners this time! All tickets have been added to the pool!"
     )
     embed.add_field(name="Current Pool", value=str(lottery[1]))
@@ -101,6 +102,7 @@ async def choose_winner(channel):
         winner = await bot.fetch_user(player_pool[roll])
         embed = discord.Embed(
             title="Lottery",
+            color=winner.color,
             description="The lottery pool has concluded!\nThe winner was " + str(winner) + "!"
         )
         embed.set_thumbnail(url=winner.avatar_url)
@@ -140,6 +142,7 @@ async def lottery_check(channel=None):
     else:
         embed = discord.Embed(
             title="Lottery",
+            color=bot.user.color,
             description="The lottery pool has not concluded yet!"
         )
         embed.add_field(name="Current Pool", value=str(lottery[1]))
