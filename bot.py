@@ -10,7 +10,9 @@ from constants import *
 gcontext = ssl.SSLContext()
 load_dotenv()
 DISCORD_TOKEN = os.getenv('DISCORD_TOKEN')
-bot = commands.Bot(command_prefix="!", help_command=None)
+intents = discord.Intents.default()
+intents.members = True
+bot = commands.Bot(command_prefix="!", help_command=None,intents=intents)
 ssl._create_default_https_context = ssl._create_unverified_context
 
 users = []
