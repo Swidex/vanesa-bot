@@ -270,6 +270,7 @@ async def ticket(ctx, amt=None):
         for player in lottery[2]:
             if ctx.message.author.id == player[0]:
                 index = counter
+            counter += 1
         lottery[2][index][1] += amt
         points[find_index(ctx.message.author.id)] -= amt*TICKET_PRICE
         lottery[1] += amt*TICKET_PRICE
